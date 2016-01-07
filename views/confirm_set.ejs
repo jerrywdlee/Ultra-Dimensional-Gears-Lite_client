@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title><%= title %> - Setting Confirm</title>
+</head>
+<body>
+	<h3>Please confirm your device [ <%= title %> ]</h3>
+	<table>
+		<% for(var i in data){ %>
+		<tr>
+			<td><%= i %> :</td>
+			<td><%= data[i] %></td>
+		</tr>
+		<% } %>
+		<tr>
+			<td align="right">
+			<button type="button" onclick="location.href='./'">Return</button>
+			</td>
+			<td align="right">
+			<button type="button" onclick="location.href='./set_db'" <%= disable %>>Edit DataBase</button>
+			</td>
+		</tr>
+	</table>
+</body>
+</html>

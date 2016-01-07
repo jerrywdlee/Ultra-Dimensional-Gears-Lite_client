@@ -2,21 +2,65 @@
 <html>
 <head>
 	<title><%= title %> - Editing DataBase</title>
+	<script type="text/javascript">
+		//setTimeout("location.reload()",5000);//reload at 5s, to escape io lag
+	</script>
 </head>
 <body>
 	<h3>Editing DataBase On [ <%= title %> ]</h3>
 <form method="GET" action="/edit_db">
 	<table>
-		
 		<tr>
-			<td align="right">
+			<td>If No Data in Table </td>
+			</td>
+			<td align="right">Please Click: 
+			<button type="button" onclick="location.reload()">Reload</button>
+			</td>
+		</tr>
+		<tr>
+			<td>-----------------</td>
+			<td align="right">-----------------</td>
+		</tr>
+		<tr>
+			<td>Sensor Name:</td>
+			<td><input type="text" name="sensor_name" id="sensor_name" required="required"/></td>
+		</tr>
+		<tr>
+			<td>MAC Address:</td>
+			<td><input type="text" name="mac_addr" id="mac_addr"/></td>
+		</tr>
+		<tr>
+			<td>Sensor Type:</td>
+			<td><input type="text" name="sensor_type" id="sensor_type" required="required"/></td>
+		</tr>
+		<tr>
+			<td>Exec Command:</td>
+			<td><input type="text" name="logic_script" id="logic_script" required="required" placeholder="node foo.js"/></td>
+		</tr>		
+		<tr>
+			<td align="left">
 			<button type="button" onclick="location.href='./'">Return</button>
 			</td>
 			<td align="right">
-			<input type="submit" value="Edit DB"/>
-			</td>
+			<input type="submit" value="Add Sensor"/>
+			
 		</tr>
 	</table>
 </form>
+<h4>Table of Sensors</h4>
+<table>
+	<% db_data.forEach(function(data){ %>
+	<tr>
+		<% for(var i in data){ %>		
+			<td><%= i %> :</td>
+			<td><%= data[i] %></td>		
+		<% } %>
+	</tr>
+	<% }) %>
+</table>
+<h4>Table of Raw-Data</h4>
+<table>
+	
+</table>
 </body>
 </html>

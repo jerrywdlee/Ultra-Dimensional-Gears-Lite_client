@@ -1,7 +1,17 @@
 var os = require('os');
 var	fs = require('fs');
+
+//DB
 var sqlite3 = require('sqlite3');
 var db_flag = null;//if db exsit
+var io_wait_time = 100;
+var db;
+connect_db();//if db exsit,try to connect
+var sql_test = "SELECT name FROM sqlite_master WHERE type='table' AND name!='sqlite_sequence' order by name;";
+//for initiate DB
+var childProcess = require('child_process');
+
+//for http server
 var	express = require('express'),
     app = express();
 //router very very important
@@ -10,8 +20,8 @@ var set_db_router = express.Router();
 //set ejs as view
 app.set('view options', { layout: false });
 app.set('view engine', 'ejs');
-
 var port = 8888;
+app.listen(port);
 
 index_router.get('/', function(req, res, next) {
   var ini_json = load_ini_json();
@@ -34,19 +44,23 @@ app.use('/set_db', function(req,res){
   var ini_json = load_ini_json();
   //and render set_db page if ini.json completed
   if (ini_json.dev_name) {
-    //
-    connect_db();
-    if (db_flag) {
-      console.log("connect db");
-      console.log(db);
-      operate_db(db);
-    }else{
-      console.log("cant connect db ");
-      console.log(db);
-
+    //if no db connection,connect    
+    if (!db_flag) {
+      connect_db();
     }
-    res.render('set_db', { title: ini_json.dev_name,
-                         data: ini_json } );
+    //operate_db(db);
+    var db_data = [{Error: "No Data!"}];
+    db.all(sql_test,function(err,res){
+      db_data = res;
+      if (err){
+          db_data = err;
+      };     
+    });
+    // waitting for io ready
+    setTimeout(function(){
+      console.log(db_data);
+      res.render('set_db', { title: ini_json.dev_name,
+                             db_data: db_data } );},io_wait_time);
   }else{
     res.end("<p>You Seems Have Not Registered Before</p>"+
       "<p><a href='./'>Click Here to Register</a><p>");
@@ -72,14 +86,14 @@ app.get('/reg_div', function(req, res){
         res.render('confirm_set', { title: ini_json.dev_name,
                                     disable: disable,
                                     data: ini_json } );
+        init_db();//when regsitered , init DB
       });
   }else{ 
-    app.use('/', router);//render index page
+    //app.use('/', router);//render index page
   }
 });
 
 
-app.listen(port);
 
 
 console.log("Please connect to :");
@@ -121,12 +135,28 @@ function load_ini_json(){
   return ini_json;
 }
 
+function init_db(){
+  var workerProcess = childProcess.exec('node init_db.js',function (err,stdout,stderr) {
+    if (err) {
+      console.log(err.stack);
+      console.log('Error code: '+err.code);
+      console.log('Signal received: '+err.signal);
+    };
+    console.log('stdout: ' + stdout);
+    console.log('stderr: ' + stderr);
+  });
+  workerProcess.on('exit',function (code) {
+    console.log('Child Process Over');
+  });
+}
+
 function connect_db(){
   db = new sqlite3.Database('client_db.sqlite3',sqlite3.OPEN_READWRITE,function (err) {
     if (err) {
-      console.log(err+"0001");
+      console.log(err);
       db_flag = null;
     }else{
+      console.log("DB connected");
       db_flag = true;
     }
   });//if write sqlite3.OPEN_READWRITE db will not create auto

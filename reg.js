@@ -1,6 +1,7 @@
 var os = require('os');
 var	fs = require('fs');
-
+var sqlite3 = require('sqlite3');
+var db_flag = null;//if db exsit
 var	express = require('express'),
     app = express();
 //router very very important
@@ -11,7 +12,6 @@ app.set('view options', { layout: false });
 app.set('view engine', 'ejs');
 
 var port = 8888;
-//var ini_json = {};
 
 index_router.get('/', function(req, res, next) {
   var ini_json = load_ini_json();
@@ -35,6 +35,16 @@ app.use('/set_db', function(req,res){
   //and render set_db page if ini.json completed
   if (ini_json.dev_name) {
     //
+    connect_db();
+    if (db_flag) {
+      console.log("connect db");
+      console.log(db);
+      operate_db(db);
+    }else{
+      console.log("cant connect db ");
+      console.log(db);
+
+    }
     res.render('set_db', { title: ini_json.dev_name,
                          data: ini_json } );
   }else{
@@ -111,11 +121,18 @@ function load_ini_json(){
   return ini_json;
 }
 
-function ini_db(){
-  try{
-    //var ini_json = JSON.parse(fs.readFileSync('./ini.json', 'utf8'));
-  }catch(e){
-    //var ini_json = { };
-  }
-  //return ini_json;
+function connect_db(){
+  db = new sqlite3.Database('client_db.sqlite3',sqlite3.OPEN_READWRITE,function (err) {
+    if (err) {
+      console.log(err+"0001");
+      db_flag = null;
+    }else{
+      db_flag = true;
+    }
+  });//if write sqlite3.OPEN_READWRITE db will not create auto
+}
+
+function operate_db(db,sql){
+    db.all("SELECT name FROM sqlite_master WHERE type='table' AND name!='sqlite_sequence' order by name;",
+    function(err,res){console.log(res);});
 }

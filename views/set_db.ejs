@@ -40,7 +40,9 @@
 			<td>
 				<select name="config" id="config" required="required" >
 						<!-- As a Placeholder -->
-						<option disabled selected>- Select Configurations -</option>
+						<!-- if no value="" ,required="required" will fail -->
+						<option disabled selected value="">- Select Configurations -</option>
+						<!--<optgroup label="- Select Configurations -"></optgroup>-->
 						<% configs_list.forEach(function(config){ %>
 						<option><%= config %></option>
 						<% }) %>
@@ -55,12 +57,12 @@ thermometer"/> -->
 		</tr>		
 		<tr>
 			<td align="left">
-			<button type="button" onclick="location.href='./'">Return</button>
+			<button type="button" onclick="location.href='./'">Return to Index</button>
 			</td>
 			<td align="right">
 				<input type="hidden" name="title" value="Instrument Added"/>
 				<input type="hidden" name="title_next" value="Edit DataBase"/>
-				<input type="hidden" name="jump_time" value="2000"/>
+				<input type="hidden" name="jump_time" value="500"/>
 				<input type="hidden" name="href" value="./set_db"/>
 			<input type="submit" value="Add Instrument"/>
 			
@@ -83,6 +85,22 @@ thermometer"/> -->
 		<!--	<td><%= i %> :</td> -->
 			<td><%= data[i] %></td>		
 		<% } %>
+		<!--  <td > <%= data.id %></td> -->
+		<% if (data.id){ %>
+
+			<td>
+				<form method="GET" action="/del_instr">
+				<input type="hidden" name="title" value="Delete <%= data.instr_name %>"/>
+				<input type="hidden" name="title_next" value="Edit DataBase"/>
+				<input type="hidden" name="jump_time" value="2000"/>
+				<input type="hidden" name="href" value="./set_db"/>
+				<input type="hidden" name="msg" value="Deleting Instrument <%= data.instr_name %> ..."/>
+				<input type="hidden" name="instr_id" value="<%= data.id %>"/>
+				<input type="submit" value="Delete" />
+				</form>
+			</td>
+		<% } %>
+		
 	</tr>
 	<% }) %>
 </table>

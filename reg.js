@@ -1,4 +1,4 @@
-var os = require('os');
+var os = require('os');//for ip reporter
 var	fs = require('fs');
 var childProcess = require('child_process');//for initiate DB, exec init_db.js
 
@@ -15,14 +15,15 @@ var db_flag = fs.readdirSync('./').indexOf('client_db.sqlite3')===-1?false:true;
 if (db_flag) {
   connect_db();//if db exsit,try to connect
 }else{
-  init_db();//else exec init_db.js
+  init_db();//else exec init_db.js to create one
 }
-var io_wait_time = 100;
+var io_wait_time = 100;//wait for db ready
 var db;
-var sql_test = "SELECT name FROM sqlite_master WHERE type='table' AND name!='sqlite_sequence' order by name";
+var sql_get_table_name = "SELECT name FROM sqlite_master WHERE type='table' AND name!='sqlite_sequence' order by name";
 var sql_instr_tab = "SELECT * FROM instrument_table ORDER BY id DESC";
 var sql_raw_data = "SELECT * FROM data_table ORDER BY sample_time DESC";
 var sql_add_instr = "INSERT INTO instrument_table (instr_name, mac_addr, config) VALUES(?, ?, ?)";
+var sql_del_instr = "DELETE FROM instrument_table WHERE id = ?;";
 
 
 //for http server
@@ -44,6 +45,7 @@ index_router.get('/', function(req, res, next) {
   						title: ini_json.dev_name || 'New Device',
   						disable: disable ||'true' , 
               uuid: ini_json.uuid || get_uuid(),
+              server_ip: ini_json.server_ip || "localhost",
               org: ini_json.org || 'Unknow.Org',
               dev_name: ini_json.dev_name || '',
               mail: ini_json.mail || '',
@@ -56,6 +58,9 @@ app.use('/', index_router);
 app.use('/set_db', function(req,res){
   //reload ini.json for setting db
   var ini_json = load_ini_json();
+  //reload configs_list if user add new plugs
+  configs_list = fs.readdirSync(configs_path);
+
   //and render set_db page if ini.json completed
   if (ini_json.dev_name&&db_flag) {
     //try to connect db    
@@ -125,31 +130,60 @@ app.get('/add_instr',function(req,res){
   var title= req.query.title,msg = "";
   var jump_time = req.query.jump_time;
   if (req.query) {
-    console.log(req.query);
+    //console.log(req.query);
     db.run(sql_add_instr, req.query.instr_name, req.query.mac_addr, req.query.config, function(err){
       if (err) {
-        console.log(err); msg = "Error:"+err; jump_time = 10000; title="Database Error"
+        console.log(err ); msg = "Error:"+err; jump_time = 15000; title="Database Error";
       }else{
-        console.log(title); msg = "New Instrument [ "+req.query.instr_name+" ] Added.";
-      }      
+        //must wait io ready
+        msg = "New Instrument [ "+req.query.instr_name+" ] Added.";
+      }   //console.log(req.query);
+    });
+  };
+  //wait db io ready
+  setTimeout(function(){
+    //console.log(title);
+    console.log(msg);
+    res.render('jump_page', { 
+          title: title,
+          title_next: req.query.title_next,
+          jump_time: jump_time,
+          href: req.query.href,
+          msg:msg } );
+  },io_wait_time);
+});
+
+app.get('/del_instr',function(req,res){
+  if (req.query) {
+    //console.log(req.query);
+    db.run(sql_del_instr, req.query.instr_id, function(err){
+      if (err) {console.log(err)};
+      console.log(req.query.title+" id: "+req.query.instr_id);
     });
   };
   res.render('jump_page', { 
-        title: title,
+        title: req.query.title,
         title_next: req.query.title_next,
-        jump_time: jump_time,
+        jump_time: req.query.jump_time,
         href: req.query.href,
-        msg:msg } );
-});
+        msg:req.query.msg } );
+})
 
 app.get('/jump_page', function(req, res){
   if (req.query) {
     res.render('jump_page', { title: req.query.title,
+                              title_next:req.query.title_next,
                               jump_time: req.query.jump_time,
                               href: req.query.href,
                               msg:req.query.msg } );
   };
 });
+
+app.get('/exit',function(req,res){
+  res.end("<p>~ Disconnected From Admin Process ~</p>");
+  console.log("------ Admin Process Shuting Down... ------");
+  process.exit();
+})
 
 //get local ip address and tell user
 console.log("Please connect to :");
@@ -200,10 +234,10 @@ function init_db(){
     console.log('stdout: ' + stdout);
     console.log('stderr: ' + stderr);
     db_flag = true;
-    console.log("db_flag :"+db_flag)
+    //console.log("db_flag :"+db_flag)
   });
   workerProcess.on('exit',function (code) {
-    console.log('Child Process Over');
+    console.log('Database Creating Process Executed');
   });
 }
 
@@ -213,7 +247,7 @@ function connect_db(){
       console.log(err);
       //db_flag = null;
     }else{
-      console.log("DB connected");
+      //console.log("DB connected");
       //db_flag = true;
     }
   });//if write sqlite3.OPEN_READWRITE db will not create auto

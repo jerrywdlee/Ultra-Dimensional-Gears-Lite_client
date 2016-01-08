@@ -24,13 +24,22 @@ if (!db_flag||!reg_flag) {
 	console.log('Initiating Process Executed');
 };
 
+//load list of config settings 
+var configs_path = "./configs"
+var configs_list = fs.readdirSync(configs_path);
+
 //connect to db
-var db = new sqlite3.Database('client_db.sqlite3');
+const db = new sqlite3.Database('client_db.sqlite3');
+const sql_instr_tab = "SELECT * FROM instrument_table ORDER BY id DESC";
+const sql_raw_data = "SELECT * FROM data_table ORDER BY sample_time DESC";
+const sql_add_instr = "INSERT INTO instrument_table (instr_name, mac_addr, config) VALUES(?, ?, ?)";
+const sql_del_instr = "DELETE FROM instrument_table WHERE id = ?;";
+
 
 //load ini.json and connect to server
 var ini_json = load_ini_json();
-console.log("Connecting to : "+'http://'+ini_json.server_ip+'/');
-var socket = socket_io.connect('http://'+ini_json.server_ip+'/');
+console.log("Connecting to : "+ini_json.server_url);
+var socket = socket_io.connect(ini_json.server_url);
 
 /*** Here is running logics ***/
 socket.on('error', function(err) { 
@@ -42,7 +51,7 @@ socket.on('connect', function() {
 });
 
 socket.on('disconnect',function() {    	
-    	console.log('Disconnected from Server')
+    console.log('Disconnected from Server')
 });
 
 
@@ -61,7 +70,6 @@ function load_ini_json(){
 }
 
 function ip_reporter () {
-	// body...
 	var os = require('os');//for ip reporter
 	var ifaces = os.networkInterfaces();
 	var port = 8888;//in child process

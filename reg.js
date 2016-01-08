@@ -45,7 +45,7 @@ index_router.get('/', function(req, res, next) {
   						title: ini_json.dev_name || 'New Device',
   						disable: disable ||'true' , 
               uuid: ini_json.uuid || get_uuid(),
-              server_ip: ini_json.server_ip || "localhost",
+              server_url: ini_json.server_url || "http://localhost/",
               org: ini_json.org || 'Unknow.Org',
               dev_name: ini_json.dev_name || '',
               mail: ini_json.mail || '',

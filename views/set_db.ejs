@@ -8,12 +8,12 @@
 </head>
 <body>
 	<h3>Editing DataBase On [ <%= title %> ]</h3>
-<form method="GET" action="/edit_db">
+<form method="GET" action="/add_instr">
 	<table>
 		<tr>
 			<td>If No Data in Table </td>
 			</td>
-			<td align="right">Please Click: 
+			<td align="right">Please Try: 
 			<button type="button" onclick="location.reload()">Reload</button>
 			</td>
 		</tr>
@@ -22,45 +22,88 @@
 			<td align="right">-----------------</td>
 		</tr>
 		<tr>
-			<td>Sensor Name:</td>
-			<td><input type="text" name="sensor_name" id="sensor_name" required="required"/></td>
+			<td>Instrument Name:</td>
+			<td><input type="text" name="instr_name" id="instr_name" required="required"/></td>
 		</tr>
 		<tr>
 			<td>MAC Address:</td>
 			<td><input type="text" name="mac_addr" id="mac_addr"/></td>
 		</tr>
+		<!--
 		<tr>
-			<td>Sensor Type:</td>
+			<td>Instrument Config:</td>
 			<td><input type="text" name="sensor_type" id="sensor_type" required="required"/></td>
 		</tr>
+	-->
 		<tr>
-			<td>Exec Command:</td>
-			<td><input type="text" name="logic_script" id="logic_script" required="required" placeholder="node foo.js"/></td>
+			<td>Instrument Config:</td>
+			<td>
+				<select name="config" id="config" required="required" >
+						<!-- As a Placeholder -->
+						<option disabled selected>- Select Configurations -</option>
+						<% configs_list.forEach(function(config){ %>
+						<option><%= config %></option>
+						<% }) %>
+				</select>
+				<!--<input type="text" name="config" id="config" required="required" placeholder="DG_
+thermometer"/> -->
+			</td>
+		</tr>
+		<tr>
+			<td>-----------------</td>
+			<td align="right">-----------------</td>
 		</tr>		
 		<tr>
 			<td align="left">
 			<button type="button" onclick="location.href='./'">Return</button>
 			</td>
 			<td align="right">
-			<input type="submit" value="Add Sensor"/>
+				<input type="hidden" name="title" value="Instrument Added"/>
+				<input type="hidden" name="title_next" value="Edit DataBase"/>
+				<input type="hidden" name="jump_time" value="2000"/>
+				<input type="hidden" name="href" value="./set_db"/>
+			<input type="submit" value="Add Instrument"/>
 			
 		</tr>
 	</table>
 </form>
-<h4>Table of Sensors</h4>
-<table>
-	<% db_data.forEach(function(data){ %>
+<h4>Table of Instruments</h4>
+<table border="1">
+	<caption></caption>
+	<tr>
+	<% for(var i in instr_data[0]){ %>
+	<th>
+		<%= i %>
+	</th>
+	<% } %>
+	</tr>
+	<% instr_data.forEach(function(data){ %>
 	<tr>
 		<% for(var i in data){ %>		
-			<td><%= i %> :</td>
+		<!--	<td><%= i %> :</td> -->
 			<td><%= data[i] %></td>		
 		<% } %>
 	</tr>
 	<% }) %>
 </table>
 <h4>Table of Raw-Data</h4>
-<table>
-	
+<table border="1">
+	<caption></caption>
+	<tr>
+	<% for(var i in raw_data[0]){ %>
+	<th>
+		<%= i %>
+	</th>
+	<% } %>
+	</tr>
+	<% raw_data.forEach(function(data){ %>
+	<tr>
+		<% for(var i in data){ %>		
+		<!--	<td><%= i %> :</td> -->
+			<td><%= data[i] %></td>		
+		<% } %>
+	</tr>
+	<% }) %>
 </table>
 </body>
 </html>

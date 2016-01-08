@@ -17,9 +17,17 @@
 			<button type="button" onclick="location.href='./'">Return</button>
 			</td>
 			<td align="right">
-			<button type="button" onclick="location.href='./set_db'" <%= disable %>>Edit DataBase</button>
+				<form method="GET" action="/jump_page">
+				<input type="hidden" name="title" value="Initiating DataBase"/>
+				<input type="hidden" name="title_next" value="Edit DataBase"/>
+				<input type="hidden" name="jump_time" value="1000"/>
+				<input type="hidden" name="href" value="./set_db"/>
+				<input type="hidden" name="msg" value="Initiating DataBase..."/>
+				<input type="submit" value="Edit DataBase" <%= disable %> />
+				</form>
 			</td>
 		</tr>
 	</table>
+	<button type="button" onclick="location.href='./set_db'" <%= disable %>>Edit DataBase</button>
 </body>
 </html>

@@ -1,22 +1,36 @@
 var os = require('os');
 var	fs = require('fs');
+var childProcess = require('child_process');//for initiate DB, exec init_db.js
+
+//load installed configs
+var configs_path = "./configs"
+var configs_list = fs.readdirSync(configs_path);
+console.log("Config Settings: ");
+console.log(configs_list);
+console.log("Are Detected...")
 
 //DB
 var sqlite3 = require('sqlite3');
-var db_flag = null;//if db exsit
+var db_flag = fs.readdirSync('./').indexOf('client_db.sqlite3')===-1?false:true;
+if (db_flag) {
+  connect_db();//if db exsit,try to connect
+}else{
+  init_db();//else exec init_db.js
+}
 var io_wait_time = 100;
 var db;
-connect_db();//if db exsit,try to connect
-var sql_test = "SELECT name FROM sqlite_master WHERE type='table' AND name!='sqlite_sequence' order by name;";
-//for initiate DB
-var childProcess = require('child_process');
+var sql_test = "SELECT name FROM sqlite_master WHERE type='table' AND name!='sqlite_sequence' order by name";
+var sql_instr_tab = "SELECT * FROM instrument_table ORDER BY id DESC";
+var sql_raw_data = "SELECT * FROM data_table ORDER BY sample_time DESC";
+var sql_add_instr = "INSERT INTO instrument_table (instr_name, mac_addr, config) VALUES(?, ?, ?)";
+
 
 //for http server
 var	express = require('express'),
     app = express();
 //router very very important
 var index_router = express.Router();
-var set_db_router = express.Router();
+//var set_db_router = express.Router();
 //set ejs as view
 app.set('view options', { layout: false });
 app.set('view engine', 'ejs');
@@ -43,27 +57,41 @@ app.use('/set_db', function(req,res){
   //reload ini.json for setting db
   var ini_json = load_ini_json();
   //and render set_db page if ini.json completed
-  if (ini_json.dev_name) {
-    //if no db connection,connect    
-    if (!db_flag) {
-      connect_db();
-    }
-    //operate_db(db);
-    var db_data = [{Error: "No Data!"}];
-    db.all(sql_test,function(err,res){
-      db_data = res;
+  if (ini_json.dev_name&&db_flag) {
+    //try to connect db    
+    connect_db();
+    var instr_data = [{Error: "Database Error!"}];//if DB err
+    var raw_data = instr_data;
+    //access db
+    db.all(sql_instr_tab,function(err,res){
+      instr_data = res;
+      if (res.length===0) {instr_data=[{},{"No Data": "No Data to View."}]};
       if (err){
-          db_data = err;
-      };     
+          instr_data =[{Error: err}] ;//avoid view error
+      };
+    });
+    db.all(sql_raw_data,function(err,res){
+      raw_data = res;
+      if (res.length===0) {raw_data=[{"No Data": "No Data to View."}]};
+      if (err) {raw_data=[{Error: err}] };
     });
     // waitting for io ready
     setTimeout(function(){
-      console.log(db_data);
-      res.render('set_db', { title: ini_json.dev_name,
-                             db_data: db_data } );},io_wait_time);
+      //console.log(db_data);
+      res.render('set_db', { 
+        title: ini_json.dev_name,
+        instr_data: instr_data ,
+        raw_data:raw_data,
+        configs_list:configs_list} 
+    );},io_wait_time);
   }else{
-    res.end("<p>You Seems Have Not Registered Before</p>"+
-      "<p><a href='./'>Click Here to Register</a><p>");
+    res.render('jump_page',{
+      title: "Not Initiated Device",
+      title_next:"Initiating",
+      msg:"Whoops! You seems have not regsitered..",
+      jump_time: 3000,
+      href: "./"
+    });
   }
 });
 
@@ -86,18 +114,45 @@ app.get('/reg_div', function(req, res){
         res.render('confirm_set', { title: ini_json.dev_name,
                                     disable: disable,
                                     data: ini_json } );
-        init_db();//when regsitered , init DB
+        //init_db();//when regsitered , init DB
       });
   }else{ 
     //app.use('/', router);//render index page
   }
 });
 
+app.get('/add_instr',function(req,res){
+  var title= req.query.title,msg = "";
+  var jump_time = req.query.jump_time;
+  if (req.query) {
+    console.log(req.query);
+    db.run(sql_add_instr, req.query.instr_name, req.query.mac_addr, req.query.config, function(err){
+      if (err) {
+        console.log(err); msg = "Error:"+err; jump_time = 10000; title="Database Error"
+      }else{
+        console.log(title); msg = "New Instrument [ "+req.query.instr_name+" ] Added.";
+      }      
+    });
+  };
+  res.render('jump_page', { 
+        title: title,
+        title_next: req.query.title_next,
+        jump_time: jump_time,
+        href: req.query.href,
+        msg:msg } );
+});
 
+app.get('/jump_page', function(req, res){
+  if (req.query) {
+    res.render('jump_page', { title: req.query.title,
+                              jump_time: req.query.jump_time,
+                              href: req.query.href,
+                              msg:req.query.msg } );
+  };
+});
 
-
+//get local ip address and tell user
 console.log("Please connect to :");
-//get local ip address 
 var ifaces = os.networkInterfaces();
 Object.keys(ifaces).forEach(function (ifname) {
   var alias = 0;
@@ -144,6 +199,8 @@ function init_db(){
     };
     console.log('stdout: ' + stdout);
     console.log('stderr: ' + stderr);
+    db_flag = true;
+    console.log("db_flag :"+db_flag)
   });
   workerProcess.on('exit',function (code) {
     console.log('Child Process Over');
@@ -154,15 +211,15 @@ function connect_db(){
   db = new sqlite3.Database('client_db.sqlite3',sqlite3.OPEN_READWRITE,function (err) {
     if (err) {
       console.log(err);
-      db_flag = null;
+      //db_flag = null;
     }else{
       console.log("DB connected");
-      db_flag = true;
+      //db_flag = true;
     }
   });//if write sqlite3.OPEN_READWRITE db will not create auto
 }
 
-function operate_db(db,sql){
+function get_db_data(sql){
     db.all("SELECT name FROM sqlite_master WHERE type='table' AND name!='sqlite_sequence' order by name;",
     function(err,res){console.log(res);});
 }

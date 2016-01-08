@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<head>
+	<title><%= title %></title>
+	<script type="text/javascript">
+		var jump_time = parseInt(<%= jump_time %>,10);// turn string to dec num
+		var temp_time = jump_time;
+		setTimeout("location.href='<%= href %>'",jump_time);//redirect to new page
+		setInterval(function() {
+			//change every 1 second
+			document.getElementById("sec").innerHTML= Math.round(temp_time/1000);
+			temp_time -= 1000;
+		},1000);
+	</script>
+</head>
+
+<body>
+	<h2>Jumping to <%= title_next %></h2>
+	<p><%= msg %></p>
+	<p>Will Jump to <%= title_next %> Page in <a id="sec"></a> Seconds...</p>
+	<table>
+		<tr>
+		  <td><button type="button" onclick="location.href='./'">Return</button></td>
+		  <td align="right"><button type="button" onclick="location.href='./set_db'" >Edit DataBase</button></td>
+		</tr>
+	</table>
+</body>

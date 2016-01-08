@@ -23,6 +23,7 @@ var sql_test = "SELECT name FROM sqlite_master WHERE type='table' AND name!='sql
 var sql_instr_tab = "SELECT * FROM instrument_table ORDER BY id DESC";
 var sql_raw_data = "SELECT * FROM data_table ORDER BY sample_time DESC";
 var sql_add_instr = "INSERT INTO instrument_table (instr_name, mac_addr, config) VALUES(?, ?, ?)";
+var sql_del_instr = "DELETE FROM instrument_table WHERE id = ?;";
 
 
 //for http server
@@ -56,6 +57,9 @@ app.use('/', index_router);
 app.use('/set_db', function(req,res){
   //reload ini.json for setting db
   var ini_json = load_ini_json();
+  //reload configs_list if user add new plugs
+  configs_list = fs.readdirSync(configs_path);
+
   //and render set_db page if ini.json completed
   if (ini_json.dev_name&&db_flag) {
     //try to connect db    
@@ -128,23 +132,46 @@ app.get('/add_instr',function(req,res){
     console.log(req.query);
     db.run(sql_add_instr, req.query.instr_name, req.query.mac_addr, req.query.config, function(err){
       if (err) {
-        console.log(err); msg = "Error:"+err; jump_time = 10000; title="Database Error"
+        console.log(err ); msg = "Error:"+err; jump_time = 10000; title="Database Error";
       }else{
+        //must wait io ready
         console.log(title); msg = "New Instrument [ "+req.query.instr_name+" ] Added.";
-      }      
+
+      }   //console.log(req.query);
+    });
+  };
+  //wait db io ready
+  setTimeout(function(){
+    //console.log(title);
+    res.render('jump_page', { 
+          title: title,
+          title_next: req.query.title_next,
+          jump_time: jump_time,
+          href: req.query.href,
+          msg:msg } );
+  },io_wait_time);
+});
+
+app.get('/del_instr',function(req,res){
+  if (req.query) {
+    //console.log(req.query);
+    db.run(sql_del_instr, req.query.instr_id, function(err){
+      if (err) {console.log(err)};
+      console.log(req.query.title+" id: "+req.query.instr_id);
     });
   };
   res.render('jump_page', { 
-        title: title,
+        title: req.query.title,
         title_next: req.query.title_next,
-        jump_time: jump_time,
+        jump_time: req.query.jump_time,
         href: req.query.href,
-        msg:msg } );
-});
+        msg:req.query.msg } );
+})
 
 app.get('/jump_page', function(req, res){
   if (req.query) {
     res.render('jump_page', { title: req.query.title,
+                              title_next:req.query.title_next,
                               jump_time: req.query.jump_time,
                               href: req.query.href,
                               msg:req.query.msg } );

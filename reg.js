@@ -129,20 +129,20 @@ app.get('/add_instr',function(req,res){
   var title= req.query.title,msg = "";
   var jump_time = req.query.jump_time;
   if (req.query) {
-    console.log(req.query);
+    //console.log(req.query);
     db.run(sql_add_instr, req.query.instr_name, req.query.mac_addr, req.query.config, function(err){
       if (err) {
-        console.log(err ); msg = "Error:"+err; jump_time = 10000; title="Database Error";
+        console.log(err ); msg = "Error:"+err; jump_time = 15000; title="Database Error";
       }else{
         //must wait io ready
-        console.log(title); msg = "New Instrument [ "+req.query.instr_name+" ] Added.";
-
+        msg = "New Instrument [ "+req.query.instr_name+" ] Added.";
       }   //console.log(req.query);
     });
   };
   //wait db io ready
   setTimeout(function(){
     //console.log(title);
+    console.log(msg);
     res.render('jump_page', { 
           title: title,
           title_next: req.query.title_next,
@@ -177,6 +177,12 @@ app.get('/jump_page', function(req, res){
                               msg:req.query.msg } );
   };
 });
+
+app.get('/exit',function(req,res){
+  res.end("<p>~ Disconnected From Admin Process ~</p>");
+  console.log("------ Shuting Down Admin Page... ------");
+  process.exit();
+})
 
 //get local ip address and tell user
 console.log("Please connect to :");
@@ -240,7 +246,7 @@ function connect_db(){
       console.log(err);
       //db_flag = null;
     }else{
-      console.log("DB connected");
+      //console.log("DB connected");
       //db_flag = true;
     }
   });//if write sqlite3.OPEN_READWRITE db will not create auto

@@ -1,6 +1,6 @@
-var socket_io = require('socket.io-client'),//socket.io-client connect server with out browser
-	sqlite3 = require('sqlite3');
-var	fs = require('fs');
+const socket_io = require('socket.io-client'),//socket.io-client connect server with out browser
+	  sqlite3 = require('sqlite3');
+const fs = require('fs');
 const child_process = require('child_process');
 
 //if uninitiated
@@ -25,7 +25,7 @@ if (!db_flag||!reg_flag) {
 };
 
 //load list of config settings 
-var configs_path = "./configs"
+const configs_path = "./configs"
 var configs_list = fs.readdirSync(configs_path);
 
 //connect to db
@@ -34,6 +34,28 @@ const sql_instr_tab = "SELECT * FROM instrument_table ORDER BY id DESC";
 const sql_raw_data = "SELECT * FROM data_table ORDER BY sample_time DESC";
 const sql_add_instr = "INSERT INTO instrument_table (instr_name, mac_addr, config) VALUES(?, ?, ?)";
 const sql_del_instr = "DELETE FROM instrument_table WHERE id = ?;";
+
+//check config files for all instrument
+var instr_list = [];
+db.all(sql_instr_tab,function(err,data){
+	if (err) {console.log(err)};
+	instr_list = data;
+	//find if some instrument have no config
+	for(var i in instr_list){
+		instr_list[i].available=false;
+		for(var j in configs_list){
+			if (instr_list[i].config===configs_list[j]) {
+				instr_list[i].available=true;break;
+			};
+		}
+	}
+	for(var i in instr_list){
+		//if some instrument's confings missing
+		if (!instr_list[i].available) {
+			console.log("Error: [ "+instr_list[i].instr_name+" ] Config File Missing");
+		};
+	}	
+});
 
 
 //load ini.json and connect to server

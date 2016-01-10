@@ -311,6 +311,14 @@ function load_ini_json(){
 }
 
 function init_db(){
+  var child = childProcess.fork('./init_db.js');
+  child.on('message',function(msg){
+    console.log("Making Database:"+msg );
+  });
+  child.on('close',function(code){
+    console.log("Database Maker Ended :"+code);
+  });
+  /*
   var workerProcess = childProcess.exec('node init_db.js',function (err,stdout,stderr) {
     if (err) {
       console.log(err.stack);
@@ -324,7 +332,7 @@ function init_db(){
   });
   workerProcess.on('exit',function (code) {
     console.log('Database Creating Process Executed');
-  });
+  });*/
 }
 
 function connect_db(){

@@ -70,13 +70,21 @@ socket.on('error', function(err) {
 
 socket.on('connect', function() {
 	console.log('Client Connected to Server');
+	socket.emit('instr_status',instr_list);
 });
 
 socket.on('disconnect',function() {    	
     console.log('Disconnected from Server')
 });
 
+socket.on('instr_status',function() {
+	socket.emit('instr_status',instr_list);
+});
 
+socket.on('local_admin_page',function() {
+	admin_page();//start admin page
+	
+});
 
 
 
@@ -114,3 +122,20 @@ function ip_reporter () {
 	});
 }
 
+function admin_page(){
+	var child = child_process.spawn('node',['reg.js'],{stdio: ['ipc']});
+	child.stdout.on('data', function(data) {
+        console.log('[Admin Page]: '  + data);
+        socket.emit('local_admin_page',data);
+    });
+	/*
+	var child = child_process.fork('./reg.js');
+	child.on('message',function(msg){
+	  console.log("Making Database:"+msg );
+	  console.log('aaa');
+	});
+	child.on('close',function(code){
+	  console.log("Admin Page Ended :"+code);
+	});
+	*/
+}

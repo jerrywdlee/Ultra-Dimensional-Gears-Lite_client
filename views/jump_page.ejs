@@ -19,8 +19,9 @@
 	<p>Will Jump to <%= title_next %> Page in <a id="sec"></a> Seconds...</p>
 	<table>
 		<tr>
-		  <td><button type="button" onclick="location.href='./'">Return</button></td>
-		  <td align="right"><button type="button" onclick="location.href='./set_db'" >Edit DataBase</button></td>
+		  <td><button type="button" onclick="location.href='./'" <%=disabled %> >Return to Index</button></td>
+		  <td align="center"><button type="button" onclick="location.href='./upload_page'" <%= disabled %>>Upload Configs</button></td>
+		  <td align="right"><button type="button" onclick="location.href='./set_db'" <%=disabled %> >Edit DataBase</button></td>
 		</tr>
 	</table>
 </body>

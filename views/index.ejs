@@ -37,7 +37,7 @@
           <td><input type="text" name="tel" id="tel" value="<%= tel %>"/></td>
         </tr>
         <tr>
-          <td></td>
+          <td><button type="button" onclick="location.href='./upload_page'"  >Upload Configs</button></td>
           <td align="right"><input type="submit" value="Regist This Device"/></td>
         </tr>
         </form>
@@ -47,6 +47,7 @@
         </tr>
         <tr>
           <td><form method="GET" action="/exit">
+            <input type="hidden" name="jump_time" value="3000"/>
             <input type="submit" value="Exit Setting"/>
           </form> </td>
           <td align="right"><button type="button" onclick="location.href='./set_db'"  <%=disable %> >Edit DataBase</button></td>

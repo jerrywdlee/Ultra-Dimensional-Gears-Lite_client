@@ -1,6 +1,9 @@
 var os = require('os');//for ip reporter
 var	fs = require('fs');
 var childProcess = require('child_process');//for initiate DB, exec init_db.js
+//to upload configs and unzip them
+var formidable = require('formidable');
+var unzip = require('unzip2');
 
 //load installed configs
 var configs_path = "./configs"
@@ -8,6 +11,16 @@ var configs_list = fs.readdirSync(configs_path);
 console.log("Config Settings: ");
 console.log(configs_list);
 console.log("Are Detected...")
+
+//create temp folder for upload
+if (fs.readdirSync('./').indexOf('temp')===-1) {
+  fs.mkdir('./temp', '0755',
+    function (err) {
+      if (err) {console.log(err);return;}
+      console.log('Temp Directory Created');
+    }
+  );
+}
 
 //DB
 var sqlite3 = require('sqlite3');
@@ -31,7 +44,7 @@ var	express = require('express'),
     app = express();
 //router very very important
 var index_router = express.Router();
-//var set_db_router = express.Router();
+
 //set ejs as view
 app.set('view options', { layout: false });
 app.set('view engine', 'ejs');
@@ -94,16 +107,16 @@ app.use('/set_db', function(req,res){
       title: "Not Initiated Device",
       title_next:"Initiating",
       msg:"Whoops! You seems have not regsitered..",
+      disabled:"",
       jump_time: 3000,
       href: "./"
     });
   }
 });
 
-//when get data from index 
+//when get data from index jump to confirm_set.ejs
 app.get('/reg_div', function(req, res){
   console.log(req.query); // for logging
-
   if (req.query) {  //if not null
   	//write ini.json
     fs.writeFile('ini.json', 
@@ -125,9 +138,9 @@ app.get('/reg_div', function(req, res){
     //app.use('/', router);//render index page
   }
 });
-
+//confirm added instrument
 app.get('/add_instr',function(req,res){
-  var title= req.query.title,msg = "";
+  var title= "",msg = "";
   var jump_time = req.query.jump_time;
   if (req.query) {
     //console.log(req.query);
@@ -136,6 +149,7 @@ app.get('/add_instr',function(req,res){
         console.log(err ); msg = "Error:"+err; jump_time = 15000; title="Database Error";
       }else{
         //must wait io ready
+        title = req.query.instr_name+" Added";
         msg = "New Instrument [ "+req.query.instr_name+" ] Added.";
       }   //console.log(req.query);
     });
@@ -149,10 +163,11 @@ app.get('/add_instr',function(req,res){
           title_next: req.query.title_next,
           jump_time: jump_time,
           href: req.query.href,
+          disabled:"",
           msg:msg } );
   },io_wait_time);
 });
-
+//confirm deleted instrument
 app.get('/del_instr',function(req,res){
   if (req.query) {
     //console.log(req.query);
@@ -166,23 +181,77 @@ app.get('/del_instr',function(req,res){
         title_next: req.query.title_next,
         jump_time: req.query.jump_time,
         href: req.query.href,
+        disabled:"",
         msg:req.query.msg } );
 })
-
-app.get('/jump_page', function(req, res){
+//jump_page from confirm_set.ejs to set_db.ejs
+app.get('/to_edit_db', function(req, res){
   if (req.query) {
     res.render('jump_page', { title: req.query.title,
                               title_next:req.query.title_next,
                               jump_time: req.query.jump_time,
                               href: req.query.href,
+                              disabled:"",
                               msg:req.query.msg } );
   };
 });
 
+//upload config files
+app.use('/upload_page',function(req,res) {
+  res.render('upload_page', { configs_list:configs_list } );
+})
+app.post('/upload_conf',function(req,res) {
+
+  var form = new formidable.IncomingForm();
+  form.encoding = 'utf-8';
+  form.uploadDir = './temp';
+  form.keepExtensions = true;
+  form.maxFieldsSize = 10 * 1024 * 1024;
+  form.parse(req, function (err, fields, files) {
+    if(err) {
+      res.send(err);
+      return;
+    }
+    console.log(files);
+ 
+    console.log(files.config_file.name);
+    //toLowerCase() will be safe
+    var path_to = configs_path+"/"+files.config_file.name.split(".")[0].toLowerCase()+"/";
+    var extract = unzip.Extract({ path:  path_to }); //out path 
+    extract.on('error', function(err) {  
+        console.log("Error:");  
+        console.log(err);   
+    });  
+    extract.on('finish', function() {  
+        console.log("Config Files Installed!");
+        //delete temp files
+        var temp_files=fs.readdirSync(form.uploadDir);
+        temp_files.forEach(function(temp) {
+          fs.unlink("./temp/"+temp,function(err) {
+            if(err){console.log(err);return;}  
+          console.log("Temp Files "+temp+" Removed")
+        });  
+      });   
+    }); 
+    var path_from =  files.config_file.path;
+    fs.createReadStream(path_from).pipe(extract);  
+
+    res.send('success');
+  });
+})
+
 app.get('/exit',function(req,res){
-  res.end("<p>~ Disconnected From Admin Process ~</p>");
+  //res.end("<p>~ Disconnected From Admin Process ~</p>");
+  res.render('jump_page', { title: "~ Admin Process Exiting ~",
+                              title_next:"Google",
+                              jump_time: req.query.jump_time,
+                              href: "http://www.google.com",
+                              disabled:"disabled",
+                              msg:"Ending Admin Process, Thank You For Using... " } );
   console.log("------ Admin Process Shuting Down... ------");
-  process.exit();
+  //setTimeout(function() {
+    process.exit();
+  //},req.query.jump_time);  
 })
 
 //get local ip address and tell user

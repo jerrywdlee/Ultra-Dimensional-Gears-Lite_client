@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>Upload Config Files</title>
+	<title>Editing Config Files</title>
 	<script type="text/javascript">
 
 		function set_conf_name(id_from,id_to) {
@@ -63,7 +63,7 @@
 			<td><input type="file" name="config_file" id="config_file" required="required" onchange="set_conf_name('config_file','conf_name')"/></td>
 		</tr>
 		<tr>
-			<td>Your Config Named As: </td>
+			<td>Your Config Install As: </td>
 			<td><input type="text" name="conf_name" id="conf_name" required="required" disabled/></td>
 		</tr>
 		<!--<tr>
@@ -74,7 +74,7 @@
 		<tr>
 			<td></td>
 			<td align="right">
-				<input type="submit" value="Submit This Config"/>
+				<input type="submit" value="Install This Config"/>
 			</td>
 		</tr>
 		<tr>
@@ -95,10 +95,26 @@
         </tr>
 	</table>-->
 	<h4>All Added Configs Shown Here:</h4>
-	<% configs_list.forEach(function(config){ %>
-	<p><%= config %></p>
-	<% }) %>
 	
+	<table>
+	<% configs_list.forEach(function(config){ %>
+	<tr>
+		<td><%= config %></td>
+		<td>
+			<form method="GET" action="/del_conf">
+			<input type="hidden" name="title" value="<%= config %>"/>
+			<input type="hidden" name="title_next" value="Edit Configs"/>
+			<input type="hidden" name="jump_time" value="2000"/>
+			<input type="hidden" name="href" value="./upload_page"/>
+			<input type="hidden" name="msg" value="Deleting Config <%= config %> ..."/>
+			<input type="hidden" name="config_name" value="<%= config %>"/>
+			<input type="submit" value="Delete" />
+			</form>
+		</td>
+	</tr>
+	<% }) %>
 
+	</table>
+	
 </body>
 </html>

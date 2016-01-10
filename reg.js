@@ -1,5 +1,6 @@
 var os = require('os');//for ip reporter
-var	fs = require('fs');
+//var	fs = require('fs');
+var fs = require('fs-extra');
 var childProcess = require('child_process');//for initiate DB, exec init_db.js
 //to upload configs and unzip them
 var formidable = require('formidable');
@@ -197,12 +198,14 @@ app.get('/to_edit_db', function(req, res){
   };
 });
 
-//upload config files
+//show edit config page
 app.use('/upload_page',function(req,res) {
+  //reload configs_list if user add/remove new plugs
+  configs_list = fs.readdirSync(configs_path);
   res.render('upload_page', { configs_list:configs_list } );
 })
+//upload config and uzip
 app.post('/upload_conf',function(req,res) {
-
   var form = new formidable.IncomingForm();
   form.encoding = 'utf-8';
   form.uploadDir = './temp';
@@ -219,13 +222,13 @@ app.post('/upload_conf',function(req,res) {
         console.log(err);   
     });  
     extract.on('finish', function() {  
-        console.log("Config Files Installed!");
+        console.log("Config [ "+file_name+" ] Installed!");
         //delete temp files
         var temp_files=fs.readdirSync(form.uploadDir);
         temp_files.forEach(function(temp) {
           fs.unlink("./temp/"+temp,function(err) {
             if(err){res.send(err);console.log(err);return;}  
-          console.log("Temp Files "+temp+" Removed")
+          //console.log("Temp Files "+temp+" Removed")
         });  
       });   
     }); 
@@ -233,16 +236,29 @@ app.post('/upload_conf',function(req,res) {
     fs.createReadStream(path_from).pipe(extract);  
     //jump to set_db
     res.render('jump_page', { title: "Config "+file_name+" Created",
-                              title_next:"Edit Database",
+                              title_next:"Edit Configs",
                               jump_time: 3000,
-                              href: "/set_db",
+                              href: "/upload_page",
                               disabled:"",
                               msg:"Config "+file_name+" Created Successfuly.." } );;
   });
 })
+//delete config
+app.get('/del_conf',function(req,res) {
+  fs.remove(configs_path+'/'+req.query.config_name, function (err) {
+  if (err){console.error(err);res.send(err); return }
+  console.log('Config [ '+req.query.config_name+' ] Deleted');
+  res.render('jump_page', { 
+        title: req.query.title+" Deleted",
+        title_next: req.query.title_next,
+        jump_time: req.query.jump_time,
+        href: req.query.href,
+        disabled:"",
+        msg:req.query.msg } );
+  });
+});
 
 app.get('/exit',function(req,res){
-  //res.end("<p>~ Disconnected From Admin Process ~</p>");
   res.render('jump_page', { title: "~ Admin Process Exiting ~",
                               title_next:"Google",
                               jump_time: req.query.jump_time,

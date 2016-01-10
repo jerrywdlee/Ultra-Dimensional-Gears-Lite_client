@@ -123,7 +123,8 @@ app.get('/reg_div', function(req, res){
     	JSON.stringify(req.query,null,' '), 
     	function(err){
         if (err) {
-          console.log(err)
+          console.log(err);
+          res.send(err);return;
         }; 
         //reload ini.json for confirm page
         var ini_json = load_ini_json();
@@ -172,12 +173,12 @@ app.get('/del_instr',function(req,res){
   if (req.query) {
     //console.log(req.query);
     db.run(sql_del_instr, req.query.instr_id, function(err){
-      if (err) {console.log(err)};
-      console.log(req.query.title+" id: "+req.query.instr_id);
+      if (err) {console.log(err);res.send(err);return;};
+      console.log("Instrument [ "+req.query.title+" ] id:"+req.query.instr_id+" Deleted");
     });
   };
   res.render('jump_page', { 
-        title: req.query.title,
+        title: req.query.title+" Deleted",
         title_next: req.query.title_next,
         jump_time: req.query.jump_time,
         href: req.query.href,
@@ -208,18 +209,13 @@ app.post('/upload_conf',function(req,res) {
   form.keepExtensions = true;
   form.maxFieldsSize = 10 * 1024 * 1024;
   form.parse(req, function (err, fields, files) {
-    if(err) {
-      res.send(err);
-      return;
-    }
-    console.log(files);
- 
-    console.log(files.config_file.name);
+    if(err) {res.send(err);console.log(err);return;}
     //toLowerCase() will be safe
-    var path_to = configs_path+"/"+files.config_file.name.split(".")[0].toLowerCase()+"/";
+    var file_name=files.config_file.name.split(".")[0].toLowerCase();
+    var path_to = configs_path+"/"+file_name+"/";
     var extract = unzip.Extract({ path:  path_to }); //out path 
     extract.on('error', function(err) {  
-        console.log("Error:");  
+        res.send(err);  
         console.log(err);   
     });  
     extract.on('finish', function() {  
@@ -228,15 +224,20 @@ app.post('/upload_conf',function(req,res) {
         var temp_files=fs.readdirSync(form.uploadDir);
         temp_files.forEach(function(temp) {
           fs.unlink("./temp/"+temp,function(err) {
-            if(err){console.log(err);return;}  
+            if(err){res.send(err);console.log(err);return;}  
           console.log("Temp Files "+temp+" Removed")
         });  
       });   
     }); 
     var path_from =  files.config_file.path;
     fs.createReadStream(path_from).pipe(extract);  
-
-    res.send('success');
+    //jump to set_db
+    res.render('jump_page', { title: "Config "+file_name+" Created",
+                              title_next:"Edit Database",
+                              jump_time: 3000,
+                              href: "/set_db",
+                              disabled:"",
+                              msg:"Config "+file_name+" Created Successfuly.." } );;
   });
 })
 
@@ -314,15 +315,8 @@ function connect_db(){
   db = new sqlite3.Database('client_db.sqlite3',sqlite3.OPEN_READWRITE,function (err) {
     if (err) {
       console.log(err);
-      //db_flag = null;
     }else{
       //console.log("DB connected");
-      //db_flag = true;
     }
   });//if write sqlite3.OPEN_READWRITE db will not create auto
-}
-
-function get_db_data(sql){
-    db.all("SELECT name FROM sqlite_master WHERE type='table' AND name!='sqlite_sequence' order by name;",
-    function(err,res){console.log(res);});
 }

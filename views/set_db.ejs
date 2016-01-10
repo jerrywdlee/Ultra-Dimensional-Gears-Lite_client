@@ -11,7 +11,7 @@
 <form method="GET" action="/add_instr">
 	<table>
 		<tr>
-			<td>If No Data in Table </td>
+			<td>Can't Find Somethong?</td>
 			</td>
 			<td align="right">Please Try: 
 			<button type="button" onclick="location.reload()">Reload</button>
@@ -52,8 +52,8 @@ thermometer"/> -->
 			</td>
 		</tr>
 		<tr>
-          <td></td>
-          <td align="right"><button type="button" onclick="location.href='./upload_page'">Upload Configs</button></td>
+          <td><button type="button" onclick="location.href='./upload_page'">Upload Configs</button></td>
+          <td align="right"></td>
         </tr>
         <tr>
 			<td>-----------------</td>
@@ -73,7 +73,7 @@ thermometer"/> -->
 		</tr>
 	</table>
 </form>
-<h4>Table of Instruments</h4>
+<h4>List of Instruments</h4>
 <table border="1">
 	<caption></caption>
 	<tr>
@@ -94,7 +94,7 @@ thermometer"/> -->
 
 			<td>
 				<form method="GET" action="/del_instr">
-				<input type="hidden" name="title" value="Delete <%= data.instr_name %>"/>
+				<input type="hidden" name="title" value="<%= data.instr_name %>"/>
 				<input type="hidden" name="title_next" value="Edit DataBase"/>
 				<input type="hidden" name="jump_time" value="2000"/>
 				<input type="hidden" name="href" value="./set_db"/>

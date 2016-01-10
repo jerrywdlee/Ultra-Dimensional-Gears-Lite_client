@@ -32,4 +32,5 @@ node_modules
 # Ini files
 ini.json
 
-
+# temp upload files
+temp

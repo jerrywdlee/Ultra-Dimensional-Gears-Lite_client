@@ -33,7 +33,9 @@ const db = new sqlite3.Database('client_db.sqlite3');
 const sql_instr_tab = "SELECT * FROM instrument_table ORDER BY id DESC";
 const sql_raw_data = "SELECT * FROM data_table ORDER BY sample_time DESC";
 const sql_add_instr = "INSERT INTO instrument_table (instr_name, mac_addr, config) VALUES(?, ?, ?)";
-const sql_del_instr = "DELETE FROM instrument_table WHERE id = ?;";
+const sql_del_instr = "DELETE FROM instrument_table WHERE id = ?";
+const sql_insert_data = "INSERT INTO data_table (instr_name, sample_time, raw_data, pushed) VALUES ($instr_name, $sample_time, $raw_data, $pushed)";
+
 
 //check config files for all instrument
 var instr_list = [];
@@ -83,13 +85,21 @@ socket.on('instr_status',function() {
 
 socket.on('local_admin_page',function() {
 	admin_page();//start admin page
-	
 });
 
+/**** this is a test ***/
+var temp_data = [];
+setInterval(function(){
+	temp_data.push({instr_name :instr_list[3].instr_name, sample_time: time_stamp(), raw_data:{aa:01,bb:02}, pushed:1})
+},500);
+setTimeout(function(){
+insert_all(temp_data);
+//console.log(temp_data);
+},5000);
 
+/**** this is a test end ***/
 
-
-/*** Here is all functions ***/
+/*** from here is all functions ***/
 function load_ini_json(){
   try{
     var ini_json = JSON.parse(fs.readFileSync('./ini.json', 'utf8'));
@@ -98,7 +108,7 @@ function load_ini_json(){
   }
   return ini_json;
 }
-
+//report loacl ip
 function ip_reporter () {
 	var os = require('os');//for ip reporter
 	var ifaces = os.networkInterfaces();
@@ -121,21 +131,43 @@ function ip_reporter () {
 	  });
 	});
 }
-
+//render admin page 
 function admin_page(){
 	var child = child_process.spawn('node',['reg.js'],{stdio: ['ipc']});
 	child.stdout.on('data', function(data) {
         console.log('[Admin Page]: '  + data);
         socket.emit('local_admin_page',data);
     });
-	/*
-	var child = child_process.fork('./reg.js');
-	child.on('message',function(msg){
-	  console.log("Making Database:"+msg );
-	  console.log('aaa');
+}
+//insert array into sqlite
+function insert_all (temp_data) {
+//	var temp_sql = "INSERT INTO data_table (instr_name, sample_time, raw_data, pushed) VALUES ($instr_name, $sample_time, $raw_data, $pushed)";
+	var counter = temp_data.length;
+	console.log(counter)
+	db.serialize(function() {
+	  var stmt = db.prepare(sql_insert_data);
+	  //for is faster, for > for..in > forEach
+	  for(var i=1;i<temp_data.length;i++){ 
+	  	stmt.run(
+	  	{
+	  		$instr_name:temp_data[i].instr_name,
+	  		$sample_time:temp_data[i].sample_time,
+	  		$raw_data:JSON.stringify(temp_data[i].raw_data),
+	  		$pushed:temp_data[i].pushed
+	  	},function(err) {
+	  		if (err) {console.error(err);return}
+	  		counter--
+	  		if (counter===1) {console.log(i+" Data Inserted.");};
+	  	});
+	  }
+	  stmt.finalize();
 	});
-	child.on('close',function(code){
-	  console.log("Admin Page Ended :"+code);
-	});
-	*/
+}
+//make a time stamp like 2016-01-06 04:41:13.636 
+function time_stamp () {
+	var now = new Date();
+	var timeNowISO = now.toISOString();//2016-01-06T04:38:02.561Z
+	var theTimeNow=timeNowISO.split('T')[0]+" "+timeNowISO.split('T')[1].split('Z')[0];
+	return theTimeNow;
+	//console.log("time: "+theTimeNow);//2016-01-06 04:41:13.636 
 }

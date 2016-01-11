@@ -317,22 +317,8 @@ function init_db(){
   });
   child.on('close',function(code){
     console.log("Database Maker Ended :"+code);
+    db_flag=true;
   });
-  /*
-  var workerProcess = childProcess.exec('node init_db.js',function (err,stdout,stderr) {
-    if (err) {
-      console.log(err.stack);
-      console.log('Error code: '+err.code);
-      console.log('Signal received: '+err.signal);
-    };
-    console.log('stdout: ' + stdout);
-    console.log('stderr: ' + stderr);
-    db_flag = true;
-    //console.log("db_flag :"+db_flag)
-  });
-  workerProcess.on('exit',function (code) {
-    console.log('Database Creating Process Executed');
-  });*/
 }
 
 function connect_db(){

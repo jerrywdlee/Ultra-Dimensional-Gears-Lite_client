@@ -1,7 +1,7 @@
 var sqlite3 = require('sqlite3');
 
 var set_sensor_table = "CREATE TABLE instrument_table (id INTEGER PRIMARY KEY AUTOINCREMENT,instr_name TEXT UNIQUE NOT NULL,mac_addr TEXT,config TEXT NOT NULL);";
-var set_data_table = " CREATE TABLE data_table( instr_name TEXT UNIQUE NOT NULL,sample_time DATETIME PRIMARY KEY,raw_data NUMERIC,pushed INT NOT NULL); ";
+var set_data_table = " CREATE TABLE data_table( instr_name TEXT NOT NULL,sample_time DATETIME PRIMARY KEY,raw_data NUMERIC,pushed INT NOT NULL); ";
 //wait until DB ready
 var wait_time = 2500;
 

@@ -143,7 +143,7 @@ socket.on('local_admin_page',function() {
 //var temp_data = [];
 setInterval(function(){
 	cached_data.push({instr_name :instr_list[3].instr_name, sample_time: time_stamp(), raw_data:{aa:01,bb:02}, pushed:0})
-},500);
+},3000);
 /*
 setTimeout(function(){
 insert_all(temp_data);

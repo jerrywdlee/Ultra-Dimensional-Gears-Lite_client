@@ -10,12 +10,7 @@ var db_flag = fs.readdirSync('./').indexOf('client_db.sqlite3')===-1?false:true;
 var reg_flag = fs.readdirSync('./').indexOf('ini.json')===-1?false:true;
 var server_remoting = false;//if remoted by server set it to true
 
-
-/*
-if (db_flag&&reg_flag) {
-	event_emitter.emit()
-};*/
-
+//if this is a new device
 if (!db_flag||!reg_flag) {
 	console.log("You seems have not initiated this device yet...");
 	//get local ip address and tell user
@@ -149,13 +144,6 @@ socket.on('ping',function(startTime){
 setInterval(function(){
 	cached_data.push({instr_name :instr_list[0].instr_name, sample_time: time_stamp(), raw_data:{aa:01,bb:02}, pushed:0})
 },3000);
-/*
-setTimeout(function(){
-insert_all(temp_data);
-//console.log(temp_data);
-},5000);
-*/
-
 
 /**** this is a test end ***/
 

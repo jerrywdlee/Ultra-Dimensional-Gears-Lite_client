@@ -42,7 +42,7 @@ const sql_add_instr = "INSERT INTO instrument_table (instr_name, mac_addr, confi
 const sql_del_instr = "DELETE FROM instrument_table WHERE id = ?";
 const sql_insert_data = "INSERT INTO data_table (instr_name, sample_time, raw_data, pushed) VALUES ($instr_name, $sample_time, $raw_data, $pushed)";
 const sql_clean_data = "DELETE FROM data_table WHERE sample_time BETWEEN $far AND $near";
-const sql_record_num = "SELECT COUNT(*) FROM $table ";
+const sql_record_num = "SELECT COUNT(*) FROM ";
 const sql_del_multi = "DELETE FROM data_table WHERE sample_time IN (SELECT sample_time FROM data_table WHERE pushed=1 ORDER BY sample_time LIMIT $number)";
 
 //check config files for all instrument
@@ -107,7 +107,8 @@ setInterval(function () {
 		};
 	})
 },db_check_freq)
-del_old_data(200);
+del_old_data(200);//it is a test
+console.log( sha_256("password"));//it is a test
 
 /*** Here is running logics ***/
 socket.on('error', function(err) { 
@@ -134,10 +135,13 @@ socket.on('local_admin_page',function() {
 	admin_page();//start admin page
 });
 // for server to caculate Network delay
-socket.on('ping',function(startTime){
+socket.on('ping',function(startTime,id){
     //var timeServer = Date.now();
-    socket.emit('pong',startTime);
-})
+    //console.log("pinged "+startTime+id);
+    socket.emit('pong_client',startTime);//why same pong only work on html
+    //socket.emit('pong',123456789);
+    //socket.emit('pong',startTime);
+});
 
 /**** this is a test ***/
 //var temp_data = [];
@@ -212,10 +216,21 @@ function insert_all (temp_data) {
 	});
 }
 function del_old_data (number) {
-	db.run(sql_del_multi,{$number:number},function(err,data){
-	  if (err) {console.log(err);socket.emit('db_error',err);return;};
-	  console.log(number+" Records Deleted");
-	  socket.emit('db_succeed',number+" Records Deleted")
+	var num_before = 0,num_after = 0;
+	db.all(sql_record_num+"data_table",function(err,data){
+		if (err) {console.log(err);return;};
+		//console.log(data);
+		num_before = data[0]['COUNT(*)'].toString(10);
+		//delete data 
+		db.run(sql_del_multi,{$number:number},function(err){
+		  if (err) {console.log(err);socket.emit('db_error',err);return;};
+		  db.all(sql_record_num+"data_table",function(err,data2){
+		  	//console.log(data);
+		  	num_after = data2[0]['COUNT(*)'].toString(10);
+		  	console.log((num_before-num_after)+" Records Deleted");
+			socket.emit('db_succeed',(num_before-num_after)+" Records Deleted")
+		  })
+		})
 	})
 }
 
@@ -226,4 +241,13 @@ function time_stamp () {
 	var theTimeNow=timeNowISO.split('T')[0]+" "+timeNowISO.split('T')[1].split('Z')[0];
 	return theTimeNow;
 	//console.log("time: "+theTimeNow);//2016-01-06 04:41:13.636 
+}
+
+//for hash password to transport
+function sha_256 (password) {
+  var jsSHA = require("jssha");
+  var shaObj = new jsSHA("SHA-256", "TEXT");
+  shaObj.update(password);
+  var hash = shaObj.getHash("HEX");
+  return hash;
 }

@@ -25,6 +25,10 @@
           <td><input type="text" name="dev_name" id="dev_name" required="required" value="<%= dev_name %>"/></td>
         </tr>
         <tr>
+          <td>Password:</td>
+          <td><input type="text" name="password" id="password" value="<%= password %>"/></td>
+        </tr>
+        <tr>
           <td>Server IP:</td>
           <td><input type="text" name="server_url" id="server_url" required="required" value="<%= server_url %>"/></td>
         </tr>
@@ -32,10 +36,7 @@
           <td>Mail:</td>
           <td><input type="text" name="mail" id="mail" value="<%= mail %>"/></td>
         </tr>
-        <tr>
-          <td>Tel:</td>
-          <td><input type="text" name="tel" id="tel" value="<%= tel %>"/></td>
-        </tr>
+        
         <tr>
           <td><button type="button" onclick="location.href='./upload_page'"  >Edit Configs</button></td>
           <td align="right"><input type="submit" value="Regist This Device"/></td>

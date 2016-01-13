@@ -63,7 +63,7 @@ index_router.get('/', function(req, res, next) {
               org: ini_json.org || 'Unknow.Org',
               dev_name: ini_json.dev_name || '',
               mail: ini_json.mail || '',
-              tel: ini_json.tel || ''});
+              password: ini_json.password || 'password'});
 });
 
 //render index page defalt
@@ -325,8 +325,6 @@ function connect_db(){
   db = new sqlite3.Database('client_db.sqlite3',sqlite3.OPEN_READWRITE,function (err) {
     if (err) {
       console.log(err);
-    }else{
-      //console.log("DB connected");
     }
   });//if write sqlite3.OPEN_READWRITE db will not create auto
 }

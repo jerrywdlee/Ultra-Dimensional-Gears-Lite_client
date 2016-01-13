@@ -48,7 +48,7 @@ const sql_del_instr = "DELETE FROM instrument_table WHERE id = ?";
 const sql_insert_data = "INSERT INTO data_table (instr_name, sample_time, raw_data, pushed) VALUES ($instr_name, $sample_time, $raw_data, $pushed)";
 const sql_clean_data = "DELETE FROM data_table WHERE sample_time BETWEEN $far AND $near";
 const sql_record_num = "SELECT COUNT(*) FROM $table ";
-const sql_del_multi = "DELETE FROM data_table WHERE sample_time IN (SELECT sample_time FROM data_table ORDER BY sample_time LIMIT $number)";
+const sql_del_multi = "DELETE FROM data_table WHERE sample_time IN (SELECT sample_time FROM data_table WHERE pushed=1 ORDER BY sample_time LIMIT $number)";
 
 //check config files for all instrument
 var instr_list = [];
@@ -112,7 +112,7 @@ setInterval(function () {
 		};
 	})
 },db_check_freq)
-//del_old_data(200);
+del_old_data(200);
 
 /*** Here is running logics ***/
 socket.on('error', function(err) { 
@@ -138,11 +138,16 @@ socket.on('instr_status',function() {
 socket.on('local_admin_page',function() {
 	admin_page();//start admin page
 });
+// for server to caculate Network delay
+socket.on('ping',function(startTime){
+    //var timeServer = Date.now();
+    socket.emit('pong',startTime);
+})
 
 /**** this is a test ***/
 //var temp_data = [];
 setInterval(function(){
-	cached_data.push({instr_name :instr_list[3].instr_name, sample_time: time_stamp(), raw_data:{aa:01,bb:02}, pushed:0})
+	cached_data.push({instr_name :instr_list[0].instr_name, sample_time: time_stamp(), raw_data:{aa:01,bb:02}, pushed:0})
 },3000);
 /*
 setTimeout(function(){

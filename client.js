@@ -107,7 +107,7 @@ setInterval(function () {
 		};
 	})
 },db_check_freq)
-del_old_data(200);//it is a test
+del_old_data(2000);//it is a test
 console.log( sha_256("password"));//it is a test
 
 /*** Here is running logics ***/
@@ -132,13 +132,14 @@ socket.on('instr_status',function() {
 });
 
 socket.on('local_admin_page',function() {
-	admin_page();//start admin page
+	//admin_page();//start admin page
 });
 // for server to caculate Network delay
-socket.on('ping',function(startTime,id){
+socket.on('ping',function(){
     //var timeServer = Date.now();
-    //console.log("pinged "+startTime+id);
-    socket.emit('pong_client',startTime);//why same pong only work on html
+    //console.log("pinged ");
+    //socket.emit('test');
+    socket.emit('pong_client');//why same pong only work on html
     //socket.emit('pong',123456789);
     //socket.emit('pong',startTime);
 });

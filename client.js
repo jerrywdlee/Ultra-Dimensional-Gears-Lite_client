@@ -135,9 +135,9 @@ socket.on('local_admin_page',function() {
 	//admin_page();//start admin page
 });
 // for server to caculate Network delay
-socket.on('ping',function(){
+socket.on('ping',function(data){
     //var timeServer = Date.now();
-    //console.log("pinged ");
+    console.log("pinged "+data);
     //socket.emit('test');
     socket.emit('pong_client');//why same pong only work on html
     //socket.emit('pong',123456789);

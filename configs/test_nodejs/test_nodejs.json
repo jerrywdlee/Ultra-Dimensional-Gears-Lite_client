@@ -1,0 +1,10 @@
+{ 
+"engine" : "node",
+"entrance" : "test2.js" ,
+"exec" : "node test2",
+"keep_run" : false,
+"auto_sample" : {"freq":3000,"keyword":"test"},
+"multiprocess":true,
+"real_time": {"req": true , "res": false},
+"author" : "YOUR.org"
+}

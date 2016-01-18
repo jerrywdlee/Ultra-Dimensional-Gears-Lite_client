@@ -62,7 +62,7 @@ db.all(sql_instr_tab,function(err,data){
 	for(var i in instr_list){
 		//if some instrument's confings missing
 		if (!instr_list[i].available) {
-			console.log("Error: [ "+instr_list[i].instr_name+" ] Config File Missing");
+			console.log("Warning: [ "+instr_list[i].instr_name+" ] Config File Missing");
 		};
 	}
 	event_emitter.emit('databaseReady');	
@@ -137,11 +137,10 @@ socket.on('local_admin_page',function() {
 // for server to caculate Network delay
 socket.on('ping',function(data){
     //var timeServer = Date.now();
-    console.log("pinged "+data);
-    //socket.emit('test');
-    socket.emit('pong_client');//why same pong only work on html
-    //socket.emit('pong',123456789);
-    //socket.emit('pong',startTime);
+    if (data) { //avoid an undefined emit
+    	console.log("pinged "+data);
+    	socket.emit('pong_client');//why same pong only work on html
+    };  
 });
 
 /**** this is a test ***/

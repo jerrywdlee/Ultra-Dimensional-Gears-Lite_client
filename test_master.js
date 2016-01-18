@@ -52,12 +52,17 @@ var workerProcess3 = child_process.spawn('java', ['test',"bbbb"],  {cwd: path3, 
    setTimeout(function() {
       workerProcess3.stdin.write("World\n");//must end by "\n"
    },4000)
-
+   setTimeout(function() {
+      workerProcess3.stdin.write("aaa\n");//must end by "\n"
+   },6000)
+   setTimeout(function() {
+      workerProcess3.kill();
+   },8000)
    //workerProcess3.stdin.end();//dont write it too quickly , will error
    workerProcess3.stderr.on('data', function (data) {
       console.log('stderr: ' + data);
    });
 
    workerProcess3.on('close', function (code) {
-      console.log('子进程已退出，退出码 '+code);
+      console.log('子进程已退出，退出码 '+code);//null:killed; 0:end by self
    });

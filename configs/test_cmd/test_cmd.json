@@ -1,0 +1,10 @@
+{ 
+"engine" : "cmd.exe",
+"entrance" : "test4.bat" ,
+"exec" : "test4.bat",
+"keep_run" : true,
+"auto_sample" : {"freq":3000,"keyword":"test"},
+"multiprocess":true,
+"real_time": {"req": true , "res": false},
+"author" : "YOUR.org"
+}

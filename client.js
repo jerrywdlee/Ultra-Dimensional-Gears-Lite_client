@@ -82,7 +82,7 @@ var cache_size = 50;
 //cache watch dog
 var watch_frequency = 60*1000; //watch cache size every minute
 setInterval(function(){
-	if (cached_data.length>cache_size&&!server_remoting) {
+	if (cached_data.length>cache_size && !server_remoting) {
 		if (socket_checker) { //if socket is connecting
 			for (var i = cached_data.length - 1; i >= 0; i--) {
 				cached_data[i].pushed = 1;//set if pushed to server

@@ -90,7 +90,7 @@ event.on('instr_setup_ready',function () {
 		//console.log(this.config)
 		var spawn = this.spawn
 		spawn.stdout.on('data', function(data){
-	    	console.log( data.toString());
+	    	console.log('[python]' +data.toString());
 		});
 
 		spawn.stderr.on('data',function(data) {
@@ -99,7 +99,7 @@ event.on('instr_setup_ready',function () {
 
 		setInterval(function () {
 			spawn.stdin.write("Hello\n");//must end by "\n"
-		},2000);	
+		},config_json.auto_sample.freq);	
 	};
 	instr_list['python_test'].running()
 
@@ -111,7 +111,7 @@ event.on('instr_setup_ready',function () {
 		//console.log(this.config)
 		var spawn = this.spawn
 		spawn.stdout.on('data', function(data){
-	    	console.log( data.toString());
+	    	console.log('[node]'+ data.toString());
 		});
 
 		spawn.stderr.on('data',function(data) {
@@ -123,6 +123,30 @@ event.on('instr_setup_ready',function () {
 		},2000);	
 	};
 	instr_list['node_test'].running()
+
+	//test 3rd object 'java_test'
+	var temp_path = __dirname+configs_path+'/'+instr_list['java_test'].config+'/'+instr_list['java_test'].config+'.json';
+	var config_json = JSON.parse(fs.readFileSync(temp_path, 'utf8'));
+	instr_list['java_test'].spawn=spawn_process(config_json,instr_list['java_test'].config);
+	instr_list['java_test'].running = function() {
+		//console.log(this.config)
+		var spawn = this.spawn
+		spawn.stdout.on('data', function(data){
+
+	    	console.log('[java]' +data.toString());
+		});
+
+		spawn.stderr.on('data',function(data) {
+			console.log("Error!! \n"+data)
+		})
+
+		setInterval(function () {
+			spawn.stdin.write("Hello\n");//must end by "\n"
+		},2000);	
+	};
+	instr_list['java_test'].running()
+	
+
 	/*
 	for (var i in instr_list) {
 		//console.log(instr_list[i])
@@ -163,7 +187,9 @@ function spawn_process (config_json,config_name) {
 			break;
 		case 'java':
 			//console.log("java")
-			return child.spawn( 'java', [temp_entrance],{stdio:[ 'pipe',null,null, 'pipe' ]});
+			//console.log(temp_entrance);
+			temp_entrance = __dirname+configs_path+'/'+config_name;
+			return child.spawn( 'java', ['-classpath',temp_entrance,config_json.entrance],{stdio:[ 'pipe',null,null, 'pipe' ]});
 			break;
 		case 'node':
 			//console.log("node")

@@ -1,9 +1,9 @@
 var child = require('child_process');
-var java = child.spawn( 'java', ['test'],{stdio:[ 'pipe',null,null, 'pipe' ]});
+var java = child.spawn( 'java', ['test','Hello','World'],{stdio:[ 'pipe',null,null, 'pipe' ]});
 
 java.stdout.on('data', function(data){
 	//chunk += data;//it returns <Buffer 74 65 73 74 5f 70 79 74 68 6f 6e 0d 0a>
-    console.log( data.toString());
+    console.log("[java]"+data.toString());
 } );
 
 setInterval(function () {

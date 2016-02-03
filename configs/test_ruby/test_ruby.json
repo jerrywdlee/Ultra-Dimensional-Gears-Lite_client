@@ -1,0 +1,10 @@
+{ 
+"engine" : "ruby",
+"entrance" : "test5.rb" ,
+"exec" : "ruby test5.rb",
+"keep_run" : true,
+"auto_sample" : {"freq":3000,"keyword":"test"},
+"multiprocess":true,
+"real_time": {"req": true , "res": false},
+"author" : "YOUR.org"
+}

@@ -55,9 +55,9 @@ app.listen(port);
 index_router.get('/', function(req, res, next) {
   var ini_json = load_ini_json();
   var disable = ini_json.dev_name?"":"disabled";//confirm if have ini.json
-  res.render('index', { 
+  res.render('index', {
   						title: ini_json.dev_name || 'New Device',
-  						disable: disable ||'true' , 
+  						disable: disable ||'true' ,
               uuid: ini_json.uuid || get_uuid(),
               server_url: ini_json.server_url || "http://localhost/",
               org: ini_json.org || 'Unknow.Org',
@@ -77,7 +77,7 @@ app.use('/set_db', function(req,res){
 
   //and render set_db page if ini.json completed
   if (ini_json.dev_name&&db_flag) {
-    //try to connect db    
+    //try to connect db
     connect_db();
     var instr_data = [{Error: "Database Error!"}];//if DB err
     var raw_data = instr_data;
@@ -97,11 +97,11 @@ app.use('/set_db', function(req,res){
     // waitting for io ready
     setTimeout(function(){
       //console.log(db_data);
-      res.render('set_db', { 
+      res.render('set_db', {
         title: ini_json.dev_name,
         instr_data: instr_data ,
         raw_data:raw_data,
-        configs_list:configs_list} 
+        configs_list:configs_list}
     );},io_wait_time);
   }else{
     res.render('jump_page',{
@@ -120,13 +120,13 @@ app.get('/reg_div', function(req, res){
   console.log(req.query); // for logging
   if (req.query) {  //if not null
   	//write ini.json
-    fs.writeFile('ini.json', 
-    	JSON.stringify(req.query,null,' '), 
+    fs.writeFile('ini.json',
+    	JSON.stringify(req.query,null,' '),
     	function(err){
         if (err) {
           console.log(err);
           res.send(err);return;
-        }; 
+        };
         //reload ini.json for confirm page
         var ini_json = load_ini_json();
         //and render  page
@@ -136,7 +136,7 @@ app.get('/reg_div', function(req, res){
                                     data: ini_json } );
         //init_db();//when regsitered , init DB
       });
-  }else{ 
+  }else{
     //app.use('/', router);//render index page
   }
 });
@@ -160,7 +160,7 @@ app.get('/add_instr',function(req,res){
   setTimeout(function(){
     //console.log(title);
     console.log(msg);
-    res.render('jump_page', { 
+    res.render('jump_page', {
           title: title,
           title_next: req.query.title_next,
           jump_time: jump_time,
@@ -178,7 +178,7 @@ app.get('/del_instr',function(req,res){
       console.log("Instrument [ "+req.query.title+" ] id:"+req.query.instr_id+" Deleted");
     });
   };
-  res.render('jump_page', { 
+  res.render('jump_page', {
         title: req.query.title+" Deleted",
         title_next: req.query.title_next,
         jump_time: req.query.jump_time,
@@ -216,24 +216,24 @@ app.post('/upload_conf',function(req,res) {
     //toLowerCase() will be safe
     var file_name=files.config_file.name.split(".")[0].toLowerCase();
     var path_to = configs_path+"/"+file_name+"/";
-    var extract = unzip.Extract({ path:  path_to }); //out path 
-    extract.on('error', function(err) {  
-        res.send(err);  
-        console.log(err);   
-    });  
-    extract.on('finish', function() {  
+    var extract = unzip.Extract({ path:  path_to }); //out path
+    extract.on('error', function(err) {
+        res.send(err);
+        console.log(err);
+    });
+    extract.on('finish', function() {
         console.log("Config [ "+file_name+" ] Installed!");
         //delete temp files
         var temp_files=fs.readdirSync(form.uploadDir);
         temp_files.forEach(function(temp) {
           fs.unlink("./temp/"+temp,function(err) {
-            if(err){res.send(err);console.log(err);return;}  
+            if(err){res.send(err);console.log(err);return;}
           //console.log("Temp Files "+temp+" Removed")
-        });  
-      });   
-    }); 
+        });
+      });
+    });
     var path_from =  files.config_file.path;
-    fs.createReadStream(path_from).pipe(extract);  
+    fs.createReadStream(path_from).pipe(extract);
     //jump to set_db
     res.render('jump_page', { title: "Config "+file_name+" Created",
                               title_next:"Edit Configs",
@@ -248,7 +248,7 @@ app.get('/del_conf',function(req,res) {
   fs.remove(configs_path+'/'+req.query.config_name, function (err) {
   if (err){console.error(err);res.send(err); return }
   console.log('Config [ '+req.query.config_name+' ] Deleted');
-  res.render('jump_page', { 
+  res.render('jump_page', {
         title: req.query.title+" Deleted",
         title_next: req.query.title_next,
         jump_time: req.query.jump_time,
@@ -259,16 +259,21 @@ app.get('/del_conf',function(req,res) {
 });
 
 app.get('/exit',function(req,res){
+  try{
+    var package_json = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+  }catch(e){
+    var package_json = { };
+  }
   res.render('jump_page', { title: "~ Admin Process Exiting ~",
-                              title_next:"Google",
-                              jump_time: req.query.jump_time,
-                              href: "http://www.google.com",
+                              title_next:package_json.name||"Google",
+                              jump_time: req.query.jump_time||3000,
+                              href: package_json.homepage||"http://www.google.com",
                               disabled:"disabled",
                               msg:"Ending Admin Process, Thank You For Using... " } );
   console.log("------ Admin Process Shuting Down... ------");
   //setTimeout(function() {
     process.exit();
-  //},req.query.jump_time);  
+  //},req.query.jump_time);
 })
 
 //get local ip address and tell user

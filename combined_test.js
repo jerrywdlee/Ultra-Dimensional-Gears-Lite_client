@@ -3,8 +3,8 @@ var db;
 const child = require('child_process');
 const fs = require('fs');
 const configs_path = '/configs';
-const EventEmitter = require('events').EventEmitter; 
-const event = new EventEmitter(); 
+const EventEmitter = require('events').EventEmitter;
+const event = new EventEmitter();
 
 const sql_instr_tab = "SELECT * FROM instrument_table ORDER BY id DESC";
 
@@ -15,12 +15,16 @@ event.on('db_connected',function (res) {
 	// wait until db connect is safer
 	db.all(sql_instr_tab,function(err,res){
 	  var instr_data = res;
-	  if (res.length===0) {instr_data=[{"No Data": "No Data to View."}]};
-	  if (err){
-	      instr_data =[{Error: err}] ;//avoid view error
-	  };
-	  event.emit('db_ready',instr_data);
-	  //console.log(instr_data)
+	  if (res.length===0) {
+			instr_data=[{"No Data": "No Data to View."}];
+			console.warn(instr_data);
+		}else if (err){
+			instr_data =[{Error: err}] ;//avoid view error
+			console.error(instr_data);
+	  }else {
+			event.emit('db_ready',instr_data);
+			//console.log(instr_data)
+	  }
 	});
 })
 
@@ -33,7 +37,7 @@ event.on('db_ready',function (instr_data) {
 			instr_list[instr_data[i].instr_name] = {
 				config : instr_data[i].config,
 				available : false
-			} 
+			}
 		}
 		var configs_list = fs.readdirSync("."+configs_path)
 		//find if some instrument have no config
@@ -56,25 +60,31 @@ event.on('instr_list_ready',function () {
 			var temp_path = __dirname+configs_path+'/'+instr_list[i].config+'/'+instr_list[i].config+'.json';
 			var config_json = JSON.parse(fs.readFileSync(temp_path, 'utf8'));
 			//console.log(config_json)
-			/*
+			/* give all objs start function */
+			instr_list[i].config_json=config_json;
 			instr_list[i].spawn=spawn_process(config_json,instr_list[i].config);
-
 			instr_list[i].running = function() {
-				//console.log(this.config)
-				
-				var spawn = this.spawn
-				instr_list[i].spawn.stdout.on('data', function(data){
-			    	console.log( data.toString());
+				var spawn = this.spawn;
+				var keyword = this.config_json.auto_sample.keyword;
+				var freq = this.config_json.auto_sample.freq;
+				var config = this.config;
+				spawn.stdout.on('data', function(data){
+			    	console.log('['+config+']' +data.toString());
 				});
 
 				spawn.stderr.on('data',function(data) {
-					console.log("Error!! \n"+data)
+					console.error("Error!! \n"+data)
 				})
 
 				setInterval(function () {
-					instr_list[i].spawn.stdin.write("Hello\n");//must end by "\n"
-				},2000);	
-			};*/
+					console.log(keyword);
+					try {
+						spawn.stdin.write(keyword+"\n");//must end by "\n"
+					} catch (e) {
+						console.error(e);
+					}
+				},freq);
+			};
 		}
 	}
 	event.emit('instr_setup_ready')
@@ -83,6 +93,7 @@ event.on('instr_list_ready',function () {
 /**** run all method, but can only one by unknow bug ****/
 event.on('instr_setup_ready',function () {
 	//test 1st obj 'python_test'
+	/*
 	var temp_path = __dirname+configs_path+'/'+instr_list['python_test'].config+'/'+instr_list['python_test'].config+'.json';
 	var config_json = JSON.parse(fs.readFileSync(temp_path, 'utf8'));
 	instr_list['python_test'].spawn=spawn_process(config_json,instr_list['python_test'].config);
@@ -99,7 +110,7 @@ event.on('instr_setup_ready',function () {
 
 		setInterval(function () {
 			spawn.stdin.write("Hello\n");//must end by "\n"
-		},config_json.auto_sample.freq);	
+		},config_json.auto_sample.freq);
 	};
 	instr_list['python_test'].running()
 
@@ -120,7 +131,7 @@ event.on('instr_setup_ready',function () {
 
 		setInterval(function () {
 			spawn.stdin.write("Hello\n");//must end by "\n"
-		},2000);	
+		},2000);
 	};
 	instr_list['node_test'].running()
 
@@ -142,20 +153,20 @@ event.on('instr_setup_ready',function () {
 
 		setInterval(function () {
 			spawn.stdin.write("Hello\n");//must end by "\n"
-		},2000);	
+		},2000);
 	};
 	instr_list['java_test'].running()
-	
+ */
 
-	/*
+
 	for (var i in instr_list) {
 		//console.log(instr_list[i])
 		if (instr_list[i].available) {
-			//instr_list[i].running()
+			instr_list[i].running()
 			console.log(i)
 		};
 	};
-	*/
+
 })
 
 
@@ -193,7 +204,10 @@ function spawn_process (config_json,config_name) {
 			break;
 		case 'node':
 			//console.log("node")
-			return child.spawn( 'node', [temp_entrance,'aaa'],{stdio:[ 'pipe',null,null, 'pipe' ]});
+			return child.spawn( 'node', [temp_entrance,' {node}'],{stdio:[ 'pipe',null,null, 'pipe' ]});
+			break;
+		case 'ruby':
+			return child.spawn( 'ruby', [temp_entrance],{stdio:[ 'pipe',null,null, 'pipe' ]});
 			break;
 	}
 }

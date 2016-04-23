@@ -8,8 +8,9 @@ while 1:
 		pass
 		break
 	print(type(input_B))
-print(input_B)
+	print(input_B)
+#print(input_B)
 
-input_C = raw_input()
+#input_C = raw_input()
 
-print(input_C)
+#print(input_C)

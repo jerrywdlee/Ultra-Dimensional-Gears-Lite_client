@@ -1,9 +1,9 @@
-{ 
+{
 "engine" : "java",
 "entrance" : "test" ,
 "exec" : "java test",
 "keep_run" : true,
-"auto_sample" : {"freq":3000,"keyword":"test"},
+"auto_sample" : {"freq":3000,"keyword":"my_java_test"},
 "multiprocess":true,
 "real_time": {"req": true , "res": false},
 "author" : "YOUR.org"

@@ -11,9 +11,9 @@
 <form method="GET" action="/add_instr">
 	<table>
 		<tr>
-			<td>Can't Find Somethong?</td>
+			<td>Can't Find Something?</td>
 			</td>
-			<td align="right">Please Try: 
+			<td align="right">Please Try:
 			<button type="button" onclick="location.reload()">Reload</button>
 			</td>
 		</tr>
@@ -58,7 +58,7 @@ thermometer"/> -->
         <tr>
 			<td>-----------------</td>
 			<td align="right">-----------------</td>
-		</tr>		
+		</tr>
 		<tr>
 			<td align="left">
 			<button type="button" onclick="location.href='./'">Return to Index</button>
@@ -69,7 +69,7 @@ thermometer"/> -->
 				<input type="hidden" name="jump_time" value="3000"/>
 				<input type="hidden" name="href" value="./set_db"/>
 			<input type="submit" value="Add Instrument"/>
-			
+
 		</tr>
 	</table>
 </form>
@@ -85,9 +85,9 @@ thermometer"/> -->
 	</tr>
 	<% instr_data.forEach(function(data){ %>
 	<tr>
-		<% for(var i in data){ %>		
+		<% for(var i in data){ %>
 		<!--	<td><%= i %> :</td> -->
-			<td><%= data[i] %></td>		
+			<td><%= data[i] %></td>
 		<% } %>
 		<!--  <td > <%= data.id %></td> -->
 		<% if (data.id){ %>
@@ -104,7 +104,7 @@ thermometer"/> -->
 				</form>
 			</td>
 		<% } %>
-		
+
 	</tr>
 	<% }) %>
 </table>
@@ -120,9 +120,9 @@ thermometer"/> -->
 	</tr>
 	<% raw_data.forEach(function(data){ %>
 	<tr>
-		<% for(var i in data){ %>		
+		<% for(var i in data){ %>
 		<!--	<td><%= i %> :</td> -->
-			<td><%= data[i] %></td>		
+			<td><%= data[i] %></td>
 		<% } %>
 	</tr>
 	<% }) %>

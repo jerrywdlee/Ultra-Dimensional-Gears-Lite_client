@@ -1,9 +1,9 @@
-{ 
+{
 "engine" : "python",
 "entrance" : "test3.py" ,
 "exec" : "python test3",
 "keep_run" : true,
-"auto_sample" : {"freq":3000,"keyword":"test"},
+"auto_sample" : {"freq":3000,"keyword":"my_py_test"},
 "multiprocess":true,
 "real_time": {"req": true , "res": false},
 "author" : "YOUR.org"

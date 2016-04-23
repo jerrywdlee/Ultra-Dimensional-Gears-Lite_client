@@ -77,7 +77,7 @@ event.on('instr_list_ready',function () {
 				})
 
 				setInterval(function () {
-					console.log(keyword);
+					//console.log(keyword);
 					try {
 						spawn.stdin.write(keyword+"\n");//must end by "\n"
 					} catch (e) {

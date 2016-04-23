@@ -1,4 +1,4 @@
-var os = require('os');//for ip reporter
+//var os = require('os');//for ip reporter
 //var	fs = require('fs');
 var fs = require('fs-extra');
 var childProcess = require('child_process');//for initiate DB, exec init_db.js
@@ -278,6 +278,9 @@ app.get('/exit',function(req,res){
 
 //get local ip address and tell user
 console.log("Please connect to :");
+var ip_reporter = require('./dg_modules/ip_reporter');
+ip_reporter(port);
+/*
 var ifaces = os.networkInterfaces();
 Object.keys(ifaces).forEach(function (ifname) {
   var alias = 0;
@@ -295,7 +298,7 @@ Object.keys(ifaces).forEach(function (ifname) {
     }
     ++alias;
   });
-});
+});*/
 
 function get_uuid(){
   var now = new Date();

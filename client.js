@@ -2,8 +2,8 @@ const socket_io = require('socket.io-client'),//socket.io-client connect server 
 	  sqlite3 = require('sqlite3');
 const fs = require('fs');
 const child_process = require('child_process');
-const events = require('events');
-const event_emitter = new events.EventEmitter();
+const EventEmitter = require('events').EventEmitter;
+const event = new EventEmitter();
 
 //if uninitiated yet
 var db_flag = fs.readdirSync('./').indexOf('client_db.sqlite3')===-1?false:true;
@@ -29,7 +29,12 @@ if (!db_flag||!reg_flag) {
 	console.log('Initiating Process Executed');
 };
 
-//load list of config settings 
+event.on('config_ready',function () {
+	
+})
+
+
+//load list of config settings
 const configs_path = "./configs"
 var configs_list = fs.readdirSync(configs_path);
 
@@ -65,7 +70,7 @@ db.all(sql_instr_tab,function(err,data){
 			console.log("Warning: [ "+instr_list[i].instr_name+" ] Config File Missing");
 		};
 	}
-	event_emitter.emit('databaseReady');	
+	event_emitter.emit('databaseReady');
 });
 
 
@@ -78,7 +83,7 @@ var socket_checker = false;//socket checker;
 //cache raw data as js obj
 var cached_data = [];
 //cached records' number under ?? not push, better under 500
-var cache_size = 50; 
+var cache_size = 50;
 //cache watch dog
 var watch_frequency = 60*1000; //watch cache size every minute
 setInterval(function(){
@@ -111,7 +116,7 @@ del_old_data(2000);//it is a test
 console.log( sha_256("password"));//it is a test
 
 /*** Here is running logics ***/
-socket.on('error', function(err) { 
+socket.on('error', function(err) {
     console.log(err);
     socket_checker=false;
 });
@@ -122,7 +127,7 @@ socket.on('connect', function() {
 	socket.emit('instr_status',instr_list);
 });
 
-socket.on('disconnect',function() {    	
+socket.on('disconnect',function() {
     console.log('Disconnected from Server')
     socket_checker=false;
 });
@@ -140,7 +145,7 @@ socket.on('ping',function(data){
     if (data) { //avoid an undefined emit
     	console.log("pinged "+data);
     	socket.emit('pong_client');//why same pong only work on html
-    };  
+    };
 });
 
 /**** this is a test ***/
@@ -199,7 +204,7 @@ function insert_all (temp_data) {
 	db.serialize(function() {
 	  var stmt = db.prepare(sql_insert_data);
 	  //for is faster, for > for..in > forEach
-	  for(var i=1;i<temp_data.length;i++){ 
+	  for(var i=1;i<temp_data.length;i++){
 	  	stmt.run(
 	  	{
 	  		$instr_name:temp_data[i].instr_name,
@@ -221,7 +226,7 @@ function del_old_data (number) {
 		if (err) {console.log(err);return;};
 		//console.log(data);
 		num_before = data[0]['COUNT(*)'].toString(10);
-		//delete data 
+		//delete data
 		db.run(sql_del_multi,{$number:number},function(err){
 		  if (err) {console.log(err);socket.emit('db_error',err);return;};
 		  db.all(sql_record_num+"data_table",function(err,data2){
@@ -234,13 +239,13 @@ function del_old_data (number) {
 	})
 }
 
-//make a time stamp like 2016-01-06 04:41:13.636 
+//make a time stamp like 2016-01-06 04:41:13.636
 function time_stamp () {
 	var now = new Date();
 	var timeNowISO = now.toISOString();//2016-01-06T04:38:02.561Z
 	var theTimeNow=timeNowISO.split('T')[0]+" "+timeNowISO.split('T')[1].split('Z')[0];
 	return theTimeNow;
-	//console.log("time: "+theTimeNow);//2016-01-06 04:41:13.636 
+	//console.log("time: "+theTimeNow);//2016-01-06 04:41:13.636
 }
 
 //for hash password to transport

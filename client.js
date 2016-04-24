@@ -229,6 +229,7 @@ event.on('instr_activited',function () {
 	})
 
 	socket.on('reg',function () {
+		console.log("reg");
 		var reg_spawn = child_process.spawn( 'node', ['./reg.js'],{stdio:[ 'pipe',null,null, 'pipe' ]});
 		reg_spawn.stdout.on('data', function(data){
 				socket.emit('reg_log',"[Reg log]"+data)
@@ -244,6 +245,7 @@ event.on('instr_activited',function () {
 		socket.on('reg_kill',function () {
 			reg_spawn.kill();
 		})
+	})
 	//del_old_data(20);//it is a test
 })
 

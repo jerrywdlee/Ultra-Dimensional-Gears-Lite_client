@@ -1,6 +1,6 @@
 const child = require('child_process');
 
-function spawn_process (config_json,config_name,dir_path,configs_path) {
+function spawn_process (config_json,config_name,dir_path,configs_path,mac_addr) {
 	var temp_entrance = dir_path+configs_path+'/'+config_name+'/'+config_json.entrance;
 	//console.log(temp_entrance)
 	switch (config_json.engine) {
@@ -17,7 +17,7 @@ function spawn_process (config_json,config_name,dir_path,configs_path) {
 		case 'java':
 			//console.log("java")
 			//console.log(temp_entrance);
-			temp_entrance = __dirname+configs_path+'/'+config_name;
+			temp_entrance = dir_path+configs_path+'/'+config_name;
 			return child.spawn( 'java', ['-classpath',temp_entrance,config_json.entrance],{stdio:[ 'pipe',null,null, 'pipe' ]});
 			break;
 		case 'node':

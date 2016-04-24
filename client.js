@@ -13,7 +13,11 @@ const sql_del_instr = "DELETE FROM instrument_table WHERE id = ?";
 const sql_insert_data = "INSERT INTO data_table (instr_name, sample_time, raw_data, pushed) VALUES ($instr_name, $sample_time, $raw_data, $pushed)";
 const sql_clean_data = "DELETE FROM data_table WHERE sample_time BETWEEN $far AND $near";
 const sql_record_num = "SELECT COUNT(*) FROM ";
-const sql_del_multi = "DELETE FROM data_table WHERE sample_time IN (SELECT sample_time FROM data_table WHERE pushed=1 ORDER BY sample_time LIMIT $number)";
+const sql_del_multi = "DELETE FROM data_table WHERE id IN (SELECT id FROM data_table WHERE pushed=1 ORDER BY sample_time LIMIT $number)";
+const sql_unpush_num = "SELECT COUNT(*) FROM data_table WHERE pushed=0";
+const sql_force_push = "SELECT * FROM data_table WHERE pushed=0 ORDER BY id LIMIT $number";
+const sql_pushed_update = "UPDATE data_table SET pushed=1 WHERE id IN (SELECT id FROM data_table WHERE pushed=0 ORDER BY sample_time LIMIT $number)"
+
 var db;
 
 
@@ -57,9 +61,11 @@ event.on('reg_ready',function () {
 		instr_data = data;
 	  if (instr_data.length===0) {
 			instr_data=[{"No Instrument": "No Data to View."}];
-			console.warn(instr_data);
-			console.warn("You Must Setup at Least 1 Instrument");
 			console.log('\n');
+			console.warn(instr_data);
+			console.log('\nWarning:\n');
+			console.warn("You Must Setup at Least 1 Instrument");
+			console.log('\nStarting Setup page...\n');
 			event.emit('reg');
 			return;
 		}else if (err){
@@ -87,8 +93,10 @@ event.on('config_check_ready',function (instr_data) {
 			active_instrs[instr_data[i].instr_name] = {
 				instr_name : instr_data[i].instr_name,
 				config : instr_data[i].config,
+				mac_addr : instr_data[i].mac_addr,
 				available : false
 			}
+			//console.log(instr_data[i]);
 		}
 		var configs_list = fs.readdirSync("."+configs_path)
 		//find if some instrument have no config
@@ -104,7 +112,7 @@ event.on('config_check_ready',function (instr_data) {
 			//console.log(active_instrs[instr_name].available);
 			//if some instrument's confings missing
 			if (!active_instrs[instr_name].available) {
-				console.log("Warning: [ "+instr_name+" ] Config File Missing");
+				console.warn("Warning: [ "+instr_name+" ] Config File Missing");
 			};
 		}
 		event.emit('instr_list_ready');
@@ -123,7 +131,8 @@ event.on('instr_list_ready',function () {
 			//console.log(config_json)
 			/* give all objs start function */
 			active_instrs[i].config_json=config_json;
-			active_instrs[i].spawn=spawn_process(config_json,active_instrs[i].config,__dirname,configs_path);
+			active_instrs[i].spawn=spawn_process(config_json,active_instrs[i].config,__dirname,configs_path,active_instrs[i].mac_addr);
+			//console.log(i+":"+active_instrs[i].mac_addr);
 			active_instrs[i].running = function() {
 				var spawn = this.spawn;
 				var keyword = this.config_json.auto_sample.keyword;
@@ -171,12 +180,13 @@ event.on('instr_setup_ready',function () {
 		//console.log(instr_list[i])
 		if (active_instrs[i].available) {
 			active_instrs[i].running()
-			console.log(i)
+			//console.log(i)
 		};
 	};
 	event.emit('instr_activited')
 })
 
+//socket events
 event.on('instr_activited',function () {
 	//load ini.json and connect to server
 	var ini_json = load_ini_json();
@@ -194,6 +204,7 @@ event.on('instr_activited',function () {
 		console.log('Client Connected to Server');
 		socket_checker=true;
 		get_instr_status();
+		//var unpushed = "Total "+unpushed_num()+" Records Unpushed";
 		socket.emit('instr_status',instr_list);
 	});
 
@@ -218,34 +229,54 @@ event.on('instr_activited',function () {
 	    	socket.emit('pong_client',data);//why same pong only work on html
 	    };
 	});
+
+	socket.on('unpushed_num',function () {
+		unpushed_num();
+	})
+	event.on('unpushed_num',function (num) {
+		console.log(num);
+		socket.emit('sum_unpushed',num);
+	})
+
+	socket.on('force_push',function (max) {
+		force_push(max);
+	})
+	event.on('unpushed_data',function (data) {
+		data.forEach(function (temp_data) {
+			temp_data.pushed=1;
+		})
+		console.log(data);
+		socket.emit('return_force_push',JSON.stringify(data,null,' '))
+	})
+	del_old_data(20);//it is a test
 })
 
 
-
-	setInterval(function(){
-		if (cached_data.length>cache_size && !server_remoting) {
-			if (socket_checker&&socket) { //if socket is connecting
-				for (var i = cached_data.length - 1; i >= 0; i--) {
-					cached_data[i].pushed = 1;//set if pushed to server
-				};
-				socket.emit('push_raw_data',JSON.stringify(cached_data,null,' '));
+//auto push and auto store
+setInterval(function(){
+	if (cached_data.length>cache_size && !server_remoting) {
+		if (socket_checker&&socket) { //if socket is connecting
+			for (var i = cached_data.length - 1; i >= 0; i--) {
+				cached_data[i].pushed = 1;//set if pushed to server
 			};
-			insert_all(cached_data);
-			cached_data=[];//clean cache
+			socket.emit('push_raw_data',JSON.stringify(cached_data,null,' '));
 		};
-	},watch_frequency);
+		insert_all(cached_data);
+		cached_data=[];//clean cache
+	};
+},watch_frequency);
 
-	//check db everyday if >1m del 1000 records
-	setInterval(function () {
-		fs.stat('./client_db.sqlite3',function(err,stats){
-			if (err) {console.error(err);};
-			//console.log(stats.size);
-			if (stats.size>db_size_under) {
-				del_old_data(auto_del_num);
-			};
-		})
-	},db_check_freq)
-	//del_old_data(2000);//it is a test
+//check db everyday if >1m del 1000 records
+setInterval(function () {
+	fs.stat('./client_db.sqlite3',function(err,stats){
+		if (err) {console.error(err);};
+		//console.log(stats.size);
+		if (stats.size>db_size_under) {
+			del_old_data(auto_del_num);
+		};
+	})
+},db_check_freq)
+
 
 	/**** this is a test ***/
 	//var temp_data = [];
@@ -396,14 +427,14 @@ function insert_all (temp_data) {
 function del_old_data (number) {
 	var num_before = 0,num_after = 0;
 	db.all(sql_record_num+"data_table",function(err,data){
-		if (err) {console.log(err);return;};
+		if (err) {console.error(err);return;};
 		//console.log(data);
 		num_before = data[0]['COUNT(*)'].toString(10);
 		//delete data
 		db.run(sql_del_multi,{$number:number},function(err){
-		  if (err) {console.log(err);socket.emit('db_error',err);return;};
+		  if (err) {console.error(err);socket.emit('db_error',err);return;};
 		  db.all(sql_record_num+"data_table",function(err,data2){
-		  	//console.log(data);
+		  	//console.log(data2);
 		  	num_after = data2[0]['COUNT(*)'].toString(10);
 		  	console.log((num_before-num_after)+" Records Deleted");
 			socket.emit('db_succeed',(num_before-num_after)+" Records Deleted")
@@ -411,6 +442,33 @@ function del_old_data (number) {
 		})
 	})
 }
+
+function unpushed_num() {
+	db.all(sql_unpush_num,function(err,data){
+		if (err) {
+			console.error('DB ERROR: '+err);
+			socket.emit('db_error',err);return;
+		}
+		//console.log(data[0]['COUNT(*)']);
+		var num = data[0]['COUNT(*)'];
+		event.emit('unpushed_num',num)
+	})
+}
+function force_push(number) {
+	//var num_before = unpushed_num();
+	db.all(sql_force_push,{$number:number},function(err,data){
+		if (err) {
+			console.error('DB ERROR'+err);socket.emit('db_error',err);return;
+		}
+		event.emit('unpushed_data',data);
+		db.run(sql_pushed_update,{$number:number},function(err){
+		  if (err) {console.log(err);socket.emit('db_error',err);return;};})
+			//console.log(data);
+			var temp_data = data;
+		return temp_data;
+	})
+}
+
 
 //make a time stamp like 2016-01-06 04:41:13.636
 function time_stamp () {

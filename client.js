@@ -48,16 +48,12 @@ var watch_frequency = 60*1000; //watch cache size every minute
 
 
 event.on('reg_ready',function () {
-	//console.log("config_ready");
 	//connect to db
 	db = new sqlite3.Database('client_db.sqlite3');
 	//check config files for all instrument
 	var instr_data = [];
 	//read all exsit configs
-	//var configs_list = fs.readdirSync(configs_path);
 	db.all(sql_instr_tab,function(err,data){
-		//if (err) {console.error(err);}
-		//instr_data = data;
 		instr_data = data;
 	  if (instr_data.length===0) {
 			instr_data=[{"No Instrument": "No Data to View."}];
@@ -74,18 +70,14 @@ event.on('reg_ready',function () {
 			event.emit('reg');
 			return;
 	  }else {
-
 			event.emit('config_check_ready',instr_data);
 			event.emit('ready_to_connect');
-			//console.log(instr_data)
 	  }
 	});
 });
 event.on('ready_to_connect',function () {
 
 })
-
-
 
 event.on('config_check_ready',function (instr_data) {
 	if (instr_data.length!=0) {
@@ -96,7 +88,6 @@ event.on('config_check_ready',function (instr_data) {
 				mac_addr : instr_data[i].mac_addr,
 				available : false
 			}
-			//console.log(instr_data[i]);
 		}
 		var configs_list = fs.readdirSync("."+configs_path)
 		//find if some instrument have no config
@@ -108,8 +99,6 @@ event.on('config_check_ready',function (instr_data) {
 			}
 		}
 		for(var instr_name in active_instrs){
-			//console.log(instr_name);
-			//console.log(active_instrs[instr_name].available);
 			//if some instrument's confings missing
 			if (!active_instrs[instr_name].available) {
 				console.warn("Warning: [ "+instr_name+" ] Config File Missing");
@@ -120,7 +109,6 @@ event.on('config_check_ready',function (instr_data) {
 });
 
 event.on('instr_list_ready',function () {
-	//console.log(active_instrs);
 	for (var i in active_instrs) {
 		if (active_instrs[i].available) {
 			//use spawn_process, need configs_path
@@ -128,11 +116,9 @@ event.on('instr_list_ready',function () {
 			//must use __dirname
 			var temp_path = __dirname+configs_path+'/'+active_instrs[i].config+'/'+active_instrs[i].config+'.json';
 			var config_json = JSON.parse(fs.readFileSync(temp_path, 'utf8'));
-			//console.log(config_json)
 			/* give all objs start function */
 			active_instrs[i].config_json=config_json;
 			active_instrs[i].spawn=spawn_process(config_json,active_instrs[i].config,__dirname,configs_path,active_instrs[i].mac_addr);
-			//console.log(i+":"+active_instrs[i].mac_addr);
 			active_instrs[i].running = function() {
 				var spawn = this.spawn;
 				var keyword = this.config_json.auto_sample.keyword;
@@ -162,7 +148,6 @@ event.on('instr_list_ready',function () {
 				});
 
 				setInterval(function () {
-					//console.log(keyword);
 					try {
 						spawn.stdin.write(keyword+"\n");//must end by "\n"
 					} catch (e) {
@@ -177,10 +162,8 @@ event.on('instr_list_ready',function () {
 
 event.on('instr_setup_ready',function () {
 	for (var i in active_instrs) {
-		//console.log(instr_list[i])
 		if (active_instrs[i].available) {
 			active_instrs[i].running()
-			//console.log(i)
 		};
 	};
 	event.emit('instr_activited')
@@ -192,19 +175,16 @@ event.on('instr_activited',function () {
 	var ini_json = load_ini_json();
 	console.log("Connecting to : "+ini_json.server_url);
 	socket = socket_io.connect(ini_json.server_url);
-	console.log( sha_256("password"));//it is a test
-	console.log( sha_256(ini_json.password));
+	console.log( sha_256(ini_json.password));//test, waitting for https
 	/*** Here is running logics ***/
 	socket.on('error', function(err) {
 	    console.log(err);
 	    socket_checker=false;
 	});
-	get_instr_status();//its a test
 	socket.on('connect', function() {
 		console.log('Client Connected to Server');
 		socket_checker=true;
 		get_instr_status();
-		//var unpushed = "Total "+unpushed_num()+" Records Unpushed";
 		socket.emit('instr_status',instr_list);
 	});
 
@@ -219,7 +199,6 @@ event.on('instr_activited',function () {
 	});
 
 	socket.on('local_admin_page',function() {
-		//admin_page();//start admin page
 	});
 	// for server to caculate Network delay
 	socket.on('ping',function(data){
@@ -234,7 +213,7 @@ event.on('instr_activited',function () {
 		unpushed_num();
 	})
 	event.on('unpushed_num',function (num) {
-		console.log(num);
+		console.log(num+" Records Unpushed.");
 		socket.emit('sum_unpushed',num);
 	})
 
@@ -248,7 +227,7 @@ event.on('instr_activited',function () {
 		console.log(data);
 		socket.emit('return_force_push',JSON.stringify(data,null,' '))
 	})
-	del_old_data(20);//it is a test
+	//del_old_data(20);//it is a test
 })
 
 
@@ -270,25 +249,11 @@ setInterval(function(){
 setInterval(function () {
 	fs.stat('./client_db.sqlite3',function(err,stats){
 		if (err) {console.error(err);};
-		//console.log(stats.size);
 		if (stats.size>db_size_under) {
 			del_old_data(auto_del_num);
 		};
 	})
 },db_check_freq)
-
-
-	/**** this is a test ***/
-	//var temp_data = [];
-	setInterval(function(){
-	//	cached_data.push({instr_name :instr_list[0].instr_name, sample_time: time_stamp(), raw_data:{aa:01,bb:02}, pushed:0})
-	},3000);
-
-	/**** this is a test end ***/
-
-
-
-
 
 event.on('reg',function () {
 	var reg_spawn = child_process.spawn( 'node', ['./reg.js'],{stdio:[ 'pipe',null,null, 'pipe' ]});
@@ -304,8 +269,6 @@ event.on('reg',function () {
 	});
 })
 
-
-
 //if db or config not ready, setup
 event.on('started',function () {
 	//reload flags
@@ -319,33 +282,8 @@ event.on('started',function () {
 })
 
 
-
-
-/*
-//if this is a new device
-if (!db_flag||!reg_flag) {
-	console.log("You seems have not initiated this device yet...");
-	//get local ip address and tell user
-	console.log("Please connect to :");
-	ip_reporter ();
-	//block loop and initiate synchronously
-	var workerProcess = child_process.execSync('node reg.js',function (err,stdout,stderr) {
-	    if (err) {
-	      console.log(err.stack);
-	      console.log('Error code: '+err.code);
-	      console.log('Signal received: '+err.signal);
-	    };
-	    console.log(stdout);
-	    console.log(stderr);
-  	});
-	console.log('Initiating Process Executed');
-};
-*/
-
 /* emiter here */
 event.emit('started');//on started , emit 1st event
-
-
 
 
 /*** from here is all functions ***/
@@ -366,45 +304,9 @@ function get_instr_status() {
 	console.log(instr_list);
 }
 
-//report loacl ip
-/*
-function ip_reporter () {
-	var os = require('os');//for ip reporter
-	var ifaces = os.networkInterfaces();
-	var port = 8888;//in child process
-	Object.keys(ifaces).forEach(function (ifname) {
-	  var alias = 0;
-	  ifaces[ifname].forEach(function (iface) {
-	    if ('IPv4' !== iface.family || iface.internal !== false) {
-	      // skip over internal (i.e. 127.0.0.1) and non-ipv4 addresses
-	      return;
-	    }
-	    if (alias >= 1) {
-	      // this single interface has multiple ipv4 addresses
-	      console.log(ifname + alias, iface.address + ':' + port);
-	    } else {
-	      // this interface has only one ipv4 adress
-	      console.log(ifname, iface.address+ ':' + port);
-	    }
-	    ++alias;
-	  });
-	});
-}*/
-//render admin page Asynchronously
-/*
-function admin_page(){
-	var child = child_process.spawn('node',['reg.js'],{stdio: ['ipc']});
-	child.stdout.on('data', function(data) {
-        console.log('[Admin Page]: '  + data);
-        socket.emit('local_admin_page',data);
-    });
-}
-*/
 //insert array into sqlite
 function insert_all (temp_data) {
-//	var temp_sql = "INSERT INTO data_table (instr_name, sample_time, raw_data, pushed) VALUES ($instr_name, $sample_time, $raw_data, $pushed)";
 	var counter = temp_data.length;
-	//console.log(counter)
 	db.serialize(function() {
 	  var stmt = db.prepare(sql_insert_data);
 	  //for is faster, for > for..in > forEach
@@ -428,13 +330,11 @@ function del_old_data (number) {
 	var num_before = 0,num_after = 0;
 	db.all(sql_record_num+"data_table",function(err,data){
 		if (err) {console.error(err);return;};
-		//console.log(data);
 		num_before = data[0]['COUNT(*)'].toString(10);
 		//delete data
 		db.run(sql_del_multi,{$number:number},function(err){
 		  if (err) {console.error(err);socket.emit('db_error',err);return;};
 		  db.all(sql_record_num+"data_table",function(err,data2){
-		  	//console.log(data2);
 		  	num_after = data2[0]['COUNT(*)'].toString(10);
 		  	console.log((num_before-num_after)+" Records Deleted");
 			socket.emit('db_succeed',(num_before-num_after)+" Records Deleted")
@@ -449,13 +349,11 @@ function unpushed_num() {
 			console.error('DB ERROR: '+err);
 			socket.emit('db_error',err);return;
 		}
-		//console.log(data[0]['COUNT(*)']);
 		var num = data[0]['COUNT(*)'];
 		event.emit('unpushed_num',num)
 	})
 }
 function force_push(number) {
-	//var num_before = unpushed_num();
 	db.all(sql_force_push,{$number:number},function(err,data){
 		if (err) {
 			console.error('DB ERROR'+err);socket.emit('db_error',err);return;
@@ -463,7 +361,6 @@ function force_push(number) {
 		event.emit('unpushed_data',data);
 		db.run(sql_pushed_update,{$number:number},function(err){
 		  if (err) {console.log(err);socket.emit('db_error',err);return;};})
-			//console.log(data);
 			var temp_data = data;
 		return temp_data;
 	})

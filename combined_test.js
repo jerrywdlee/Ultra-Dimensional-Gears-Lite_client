@@ -76,6 +76,10 @@ event.on('instr_list_ready',function () {
 					console.error("Error!! \n"+data)
 				})
 
+				spawn.on('close', function (code) {
+		 			console.log(config + ' is exited : '+code);
+				});
+
 				setInterval(function () {
 					//console.log(keyword);
 					try {

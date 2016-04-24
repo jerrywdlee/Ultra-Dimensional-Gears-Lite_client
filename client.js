@@ -5,11 +5,292 @@ const child_process = require('child_process');
 const EventEmitter = require('events').EventEmitter;
 const event = new EventEmitter();
 
-//if uninitiated yet
+/* SQL queries */
+const sql_instr_tab = "SELECT * FROM instrument_table ORDER BY id DESC";
+const sql_raw_data = "SELECT * FROM data_table ORDER BY sample_time DESC";
+const sql_add_instr = "INSERT INTO instrument_table (instr_name, mac_addr, config) VALUES(?, ?, ?)";
+const sql_del_instr = "DELETE FROM instrument_table WHERE id = ?";
+const sql_insert_data = "INSERT INTO data_table (instr_name, sample_time, raw_data, pushed) VALUES ($instr_name, $sample_time, $raw_data, $pushed)";
+const sql_clean_data = "DELETE FROM data_table WHERE sample_time BETWEEN $far AND $near";
+const sql_record_num = "SELECT COUNT(*) FROM ";
+const sql_del_multi = "DELETE FROM data_table WHERE sample_time IN (SELECT sample_time FROM data_table WHERE pushed=1 ORDER BY sample_time LIMIT $number)";
+var db;
+
+
+//load list of config settings
+const configs_path = "/configs"
+var configs_list ,instr_list;
+
+//delete data if db too big
+var db_check_freq = 24*60*60*1000; //check db size daily
+var db_size_under = 1*1000*1000; //db bigger than 1M delete data
+var auto_del_num = 1000; //auto delete 1000 records
+
+//a lot of flags
 var db_flag = fs.readdirSync('./').indexOf('client_db.sqlite3')===-1?false:true;
 var reg_flag = fs.readdirSync('./').indexOf('ini.json')===-1?false:true;
 var server_remoting = false;//if remoted by server set it to true
+var socket_checker = false;//socket checker;
+var socket;
 
+//store of activited objs
+var active_instrs = {};
+//cache raw data as js obj
+var cached_data = [];
+//cached records' number under ?? not push, better under 500
+var cache_size = 50;
+//cache watch dog
+var watch_frequency = 60*1000; //watch cache size every minute
+
+
+event.on('reg_ready',function () {
+	//console.log("config_ready");
+	//connect to db
+	db = new sqlite3.Database('client_db.sqlite3');
+	//check config files for all instrument
+	var instr_data = [];
+	//read all exsit configs
+	//var configs_list = fs.readdirSync(configs_path);
+	db.all(sql_instr_tab,function(err,data){
+		//if (err) {console.error(err);}
+		//instr_data = data;
+		instr_data = data;
+	  if (instr_data.length===0) {
+			instr_data=[{"No Instrument": "No Data to View."}];
+			console.warn(instr_data);
+			console.warn("You Must Setup at Least 1 Instrument");
+			console.log('\n');
+			event.emit('reg');
+			return;
+		}else if (err){
+			instr_data =[{Error: err}] ;//avoid view error
+			console.error(instr_data);
+			event.emit('reg');
+			return;
+	  }else {
+
+			event.emit('config_check_ready',instr_data);
+			event.emit('ready_to_connect');
+			//console.log(instr_data)
+	  }
+	});
+});
+event.on('ready_to_connect',function () {
+
+})
+
+
+
+event.on('config_check_ready',function (instr_data) {
+	if (instr_data.length!=0) {
+		for (var i = instr_data.length - 1; i >= 0; i--) {
+			active_instrs[instr_data[i].instr_name] = {
+				instr_name : instr_data[i].instr_name,
+				config : instr_data[i].config,
+				available : false
+			}
+		}
+		var configs_list = fs.readdirSync("."+configs_path)
+		//find if some instrument have no config
+		for(var i in active_instrs){
+			for(var j = configs_list.length - 1; j >= 0; j--){
+				if (active_instrs[i].config===configs_list[j]) {
+					active_instrs[i].available=true;break;
+				}
+			}
+		}
+		for(var instr_name in active_instrs){
+			//console.log(instr_name);
+			//console.log(active_instrs[instr_name].available);
+			//if some instrument's confings missing
+			if (!active_instrs[instr_name].available) {
+				console.log("Warning: [ "+instr_name+" ] Config File Missing");
+			};
+		}
+		event.emit('instr_list_ready');
+	}
+});
+
+event.on('instr_list_ready',function () {
+	//console.log(active_instrs);
+	for (var i in active_instrs) {
+		if (active_instrs[i].available) {
+			//use spawn_process, need configs_path
+			var spawn_process = require('./dg_modules/spawn_process');
+			//must use __dirname
+			var temp_path = __dirname+configs_path+'/'+active_instrs[i].config+'/'+active_instrs[i].config+'.json';
+			var config_json = JSON.parse(fs.readFileSync(temp_path, 'utf8'));
+			//console.log(config_json)
+			/* give all objs start function */
+			active_instrs[i].config_json=config_json;
+			active_instrs[i].spawn=spawn_process(config_json,active_instrs[i].config,__dirname,configs_path);
+			active_instrs[i].running = function() {
+				var spawn = this.spawn;
+				var keyword = this.config_json.auto_sample.keyword;
+				var freq = this.config_json.auto_sample.freq;
+				var config = this.config;
+				var instr_name = this.instr_name;
+				spawn.stdout.on('data', function(data){
+					console.log('['+instr_name+']' +data.toString());
+					cached_data.push({
+						instr_name :instr_name,
+						sample_time: time_stamp(),
+						raw_data:data.toString().replace(/\r?\n/g,""),
+						pushed:0});
+				});
+
+				spawn.stderr.on('data',function(data) {
+					console.error("Error!! \n"+data)
+					cached_data.push({
+						instr_name :instr_name,
+						sample_time: time_stamp(),
+						raw_data:'[Error:]'+data.toString().replace(/\r?\n/g,""),
+						pushed:0});
+				})
+
+				spawn.on('close', function (code) {
+					console.log(config + ' is exited : '+code);
+				});
+
+				setInterval(function () {
+					//console.log(keyword);
+					try {
+						spawn.stdin.write(keyword+"\n");//must end by "\n"
+					} catch (e) {
+						console.error(e);
+					}
+				},freq);
+			};
+		}
+	}
+	event.emit('instr_setup_ready')
+})
+
+event.on('instr_setup_ready',function () {
+	for (var i in active_instrs) {
+		//console.log(instr_list[i])
+		if (active_instrs[i].available) {
+			active_instrs[i].running()
+			console.log(i)
+		};
+	};
+	event.emit('instr_activited')
+})
+
+event.on('instr_activited',function () {
+	//load ini.json and connect to server
+	var ini_json = load_ini_json();
+	console.log("Connecting to : "+ini_json.server_url);
+	socket = socket_io.connect(ini_json.server_url);
+	console.log( sha_256("password"));//it is a test
+	console.log( sha_256(ini_json.password));
+	/*** Here is running logics ***/
+	socket.on('error', function(err) {
+	    console.log(err);
+	    socket_checker=false;
+	});
+	get_instr_status();//its a test
+	socket.on('connect', function() {
+		console.log('Client Connected to Server');
+		socket_checker=true;
+		get_instr_status();
+		socket.emit('instr_status',instr_list);
+	});
+
+	socket.on('disconnect',function() {
+	    console.log('Disconnected from Server')
+	    socket_checker=false;
+	});
+
+	socket.on('instr_status',function() {
+		get_instr_status();
+		socket.emit('instr_status',instr_list);
+	});
+
+	socket.on('local_admin_page',function() {
+		//admin_page();//start admin page
+	});
+	// for server to caculate Network delay
+	socket.on('ping',function(data){
+	    //var timeServer = Date.now();
+	    if (data) { //avoid an undefined emit
+	    	console.log("pinged "+data);
+	    	socket.emit('pong_client',data);//why same pong only work on html
+	    };
+	});
+})
+
+
+
+	setInterval(function(){
+		if (cached_data.length>cache_size && !server_remoting) {
+			if (socket_checker&&socket) { //if socket is connecting
+				for (var i = cached_data.length - 1; i >= 0; i--) {
+					cached_data[i].pushed = 1;//set if pushed to server
+				};
+				socket.emit('push_raw_data',JSON.stringify(cached_data,null,' '));
+			};
+			insert_all(cached_data);
+			cached_data=[];//clean cache
+		};
+	},watch_frequency);
+
+	//check db everyday if >1m del 1000 records
+	setInterval(function () {
+		fs.stat('./client_db.sqlite3',function(err,stats){
+			if (err) {console.error(err);};
+			//console.log(stats.size);
+			if (stats.size>db_size_under) {
+				del_old_data(auto_del_num);
+			};
+		})
+	},db_check_freq)
+	//del_old_data(2000);//it is a test
+
+	/**** this is a test ***/
+	//var temp_data = [];
+	setInterval(function(){
+	//	cached_data.push({instr_name :instr_list[0].instr_name, sample_time: time_stamp(), raw_data:{aa:01,bb:02}, pushed:0})
+	},3000);
+
+	/**** this is a test end ***/
+
+
+
+
+
+event.on('reg',function () {
+	var reg_spawn = child_process.spawn( 'node', ['./reg.js'],{stdio:[ 'pipe',null,null, 'pipe' ]});
+	reg_spawn.stdout.on('data', function(data){
+			console.log('['+'Register'+']' +data.toString());
+	});
+	reg_spawn.stderr.on('data',function(data) {
+		console.error("Error!! \n"+data)
+	});
+	reg_spawn.on('close', function (code) {
+		console.log('Register' + ' is exited : '+code);
+		event.emit('started');//restart
+	});
+})
+
+
+
+//if db or config not ready, setup
+event.on('started',function () {
+	//reload flags
+	db_flag = fs.readdirSync('./').indexOf('client_db.sqlite3')===-1?false:true;
+	reg_flag = fs.readdirSync('./').indexOf('ini.json')===-1?false:true;
+	if (db_flag && reg_flag) {
+		event.emit('reg_ready');
+	}else {
+		event.emit('reg');
+	}
+})
+
+
+
+
+/*
 //if this is a new device
 if (!db_flag||!reg_flag) {
 	console.log("You seems have not initiated this device yet...");
@@ -28,133 +309,13 @@ if (!db_flag||!reg_flag) {
   	});
 	console.log('Initiating Process Executed');
 };
+*/
 
-event.on('config_ready',function () {
-	
-})
-
-
-//load list of config settings
-const configs_path = "./configs"
-var configs_list = fs.readdirSync(configs_path);
-
-//connect to db
-const db = new sqlite3.Database('client_db.sqlite3');
-//SQL queries
-const sql_instr_tab = "SELECT * FROM instrument_table ORDER BY id DESC";
-const sql_raw_data = "SELECT * FROM data_table ORDER BY sample_time DESC";
-const sql_add_instr = "INSERT INTO instrument_table (instr_name, mac_addr, config) VALUES(?, ?, ?)";
-const sql_del_instr = "DELETE FROM instrument_table WHERE id = ?";
-const sql_insert_data = "INSERT INTO data_table (instr_name, sample_time, raw_data, pushed) VALUES ($instr_name, $sample_time, $raw_data, $pushed)";
-const sql_clean_data = "DELETE FROM data_table WHERE sample_time BETWEEN $far AND $near";
-const sql_record_num = "SELECT COUNT(*) FROM ";
-const sql_del_multi = "DELETE FROM data_table WHERE sample_time IN (SELECT sample_time FROM data_table WHERE pushed=1 ORDER BY sample_time LIMIT $number)";
-
-//check config files for all instrument
-var instr_list = [];
-db.all(sql_instr_tab,function(err,data){
-	if (err) {console.error(err);}
-	instr_list = data;
-	//find if some instrument have no config
-	for(var i in instr_list){
-		instr_list[i].available=false;
-		for(var j in configs_list){
-			if (instr_list[i].config===configs_list[j]) {
-				instr_list[i].available=true;break;
-			};
-		}
-	}
-	for(var i in instr_list){
-		//if some instrument's confings missing
-		if (!instr_list[i].available) {
-			console.log("Warning: [ "+instr_list[i].instr_name+" ] Config File Missing");
-		};
-	}
-	event_emitter.emit('databaseReady');
-});
+/* emiter here */
+event.emit('started');//on started , emit 1st event
 
 
-//load ini.json and connect to server
-var ini_json = load_ini_json();
-console.log("Connecting to : "+ini_json.server_url);
-var socket = socket_io.connect(ini_json.server_url);
-var socket_checker = false;//socket checker;
 
-//cache raw data as js obj
-var cached_data = [];
-//cached records' number under ?? not push, better under 500
-var cache_size = 50;
-//cache watch dog
-var watch_frequency = 60*1000; //watch cache size every minute
-setInterval(function(){
-	if (cached_data.length>cache_size && !server_remoting) {
-		if (socket_checker) { //if socket is connecting
-			for (var i = cached_data.length - 1; i >= 0; i--) {
-				cached_data[i].pushed = 1;//set if pushed to server
-			};
-			socket.emit('push_raw_data',cached_data);
-		};
-		insert_all(cached_data);
-		cached_data=[];//clean cache
-	};
-},watch_frequency);
-
-//delete data if db too big
-var db_check_freq = 24*60*60*1000; //check db size daily
-var db_size_under = 1*1000*1000; //db bigger than 1M delete data
-var auto_del_num = 1000; //auto delete 1000 records
-setInterval(function () {
-	fs.stat('./client_db.sqlite3',function(err,stats){
-		if (err) {console.error(err);};
-		//console.log(stats.size);
-		if (stats.size>db_size_under) {
-			del_old_data(auto_del_num);
-		};
-	})
-},db_check_freq)
-del_old_data(2000);//it is a test
-console.log( sha_256("password"));//it is a test
-
-/*** Here is running logics ***/
-socket.on('error', function(err) {
-    console.log(err);
-    socket_checker=false;
-});
-
-socket.on('connect', function() {
-	console.log('Client Connected to Server');
-	socket_checker=true;
-	socket.emit('instr_status',instr_list);
-});
-
-socket.on('disconnect',function() {
-    console.log('Disconnected from Server')
-    socket_checker=false;
-});
-
-socket.on('instr_status',function() {
-	socket.emit('instr_status',instr_list);
-});
-
-socket.on('local_admin_page',function() {
-	//admin_page();//start admin page
-});
-// for server to caculate Network delay
-socket.on('ping',function(data){
-    //var timeServer = Date.now();
-    if (data) { //avoid an undefined emit
-    	console.log("pinged "+data);
-    	socket.emit('pong_client');//why same pong only work on html
-    };
-});
-
-/**** this is a test ***/
-//var temp_data = [];
-setInterval(function(){
-	cached_data.push({instr_name :instr_list[0].instr_name, sample_time: time_stamp(), raw_data:{aa:01,bb:02}, pushed:0})
-},3000);
-
-/**** this is a test end ***/
 
 /*** from here is all functions ***/
 function load_ini_json(){
@@ -165,7 +326,17 @@ function load_ini_json(){
   }
   return ini_json;
 }
+
+function get_instr_status() {
+	instr_list = {}
+	for (var instr_name in active_instrs) {
+		instr_list[instr_name] = active_instrs[instr_name].available;
+	}
+	console.log(instr_list);
+}
+
 //report loacl ip
+/*
 function ip_reporter () {
 	var os = require('os');//for ip reporter
 	var ifaces = os.networkInterfaces();
@@ -187,8 +358,9 @@ function ip_reporter () {
 	    ++alias;
 	  });
 	});
-}
+}*/
 //render admin page Asynchronously
+/*
 function admin_page(){
 	var child = child_process.spawn('node',['reg.js'],{stdio: ['ipc']});
 	child.stdout.on('data', function(data) {
@@ -196,6 +368,7 @@ function admin_page(){
         socket.emit('local_admin_page',data);
     });
 }
+*/
 //insert array into sqlite
 function insert_all (temp_data) {
 //	var temp_sql = "INSERT INTO data_table (instr_name, sample_time, raw_data, pushed) VALUES ($instr_name, $sample_time, $raw_data, $pushed)";

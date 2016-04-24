@@ -1,4 +1,4 @@
-function ip_reporter (port) {
+function ip_reporter (port, if_qr) {
 	var os = require('os');//for ip reporter
 	var ifaces = os.networkInterfaces();
   var qrcode = require('qrcode-terminal');
@@ -14,13 +14,17 @@ function ip_reporter (port) {
 	    if (alias >= 1) {
 	      // this single interface has multiple ipv4 addresses
 	      console.log('['+ifname + alias+'] \n'+iface.address + ':' + port);
-        qrcode.generate(iface.address + ':' + port);
-        console.log("\n");
+        if (if_qr) {
+          qrcode.generate(iface.address + ':' + port);
+          console.log("\n");
+        }
 	    } else {
 	      // this interface has only one ipv4 adress
 	      console.log('['+ifname +']\n'+ iface.address+ ':' + port);
-        qrcode.generate(iface.address + ':' + port);
-        console.log("\n");
+        if (if_qr) {
+          qrcode.generate(iface.address + ':' + port);
+          console.log("\n");
+        }
 	    }
 	    ++alias;
 	  });

@@ -227,6 +227,23 @@ event.on('instr_activited',function () {
 		console.log(data);
 		socket.emit('return_force_push',JSON.stringify(data,null,' '))
 	})
+
+	socket.on('reg',function () {
+		var reg_spawn = child_process.spawn( 'node', ['./reg.js'],{stdio:[ 'pipe',null,null, 'pipe' ]});
+		reg_spawn.stdout.on('data', function(data){
+				socket.emit('reg_log',"[Reg log]"+data)
+		});
+		reg_spawn.stderr.on('data',function(data) {
+			socket.emit('reg_log',"Error!! \n"+data)
+		});
+		reg_spawn.on('close', function (code) {
+			console.log();
+			socket.emit('reg_log','Register is exited : '+code)
+			event.emit('started');//restart
+		})
+		socket.on('reg_kill',function () {
+			reg_spawn.kill();
+		})
 	//del_old_data(20);//it is a test
 })
 

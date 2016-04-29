@@ -246,7 +246,24 @@ event.on('instr_activited',function () {
 			reg_spawn.kill();
 		})
 	})
+
+	socket.on('god_hand',function (mode,sql_query) {
+		//console.log("[god_hand]"+mode);
+		//console.log("[god_hand]"+sql_query);
+		//var god_hand_return = god_hand(mode,sql_query);
+		//console.log("[god_hand]"+god_hand_return);
+		god_hand(mode,sql_query);
+		event.on('god_hand_return',function (json_data) {
+			//console.log("[god_hand_return]"+json_data);
+			socket.emit('god_hand_return',json_data);
+		})
+	})
 	//del_old_data(20);//it is a test
+	//god_hand test
+//	god_hand("show","SELECT * FROM instrument_table ORDER BY id DESC");
+//	event.on('god_hand_return',function (json_data) {
+//		console.log("[god_hand_return]"+json_data);
+//	})
 })
 
 
@@ -264,7 +281,7 @@ setInterval(function(){
 	};
 },watch_frequency);
 
-//check db everyday if >1m del 1000 records
+//check db everyday if >1m del 1000 unuploaded records
 setInterval(function () {
 	fs.stat('./client_db.sqlite3',function(err,stats){
 		if (err) {console.error(err);};
@@ -378,6 +395,7 @@ function force_push(number) {
 			console.error('DB ERROR'+err);socket.emit('db_error',err);return;
 		}
 		event.emit('unpushed_data',data);
+		//pushed : 0 => pushed : 1
 		db.run(sql_pushed_update,{$number:number},function(err){
 		  if (err) {console.log(err);socket.emit('db_error',err);return;};})
 			var temp_data = data;
@@ -385,6 +403,38 @@ function force_push(number) {
 	})
 }
 
+function god_hand(mode,sql_query) {
+	var json_data;
+	switch (mode) {
+		case "READ":
+		case "SHOW":
+		case "read":
+		case "show":
+		//console.log(mode);
+			db.all(sql_query,function (err,data) {
+				if (err) {json_data = JSON.stringify(err,null,' ');return;}
+				//console.log(data);
+				json_data = JSON.stringify(data,null,' ');
+				//console.log(json_data);
+				//return json_data;
+				event.emit('god_hand_return',json_data)
+			})
+			break;
+		case "INSERT":
+		case "UPDATE":
+		case "WRITE":
+		case "write":
+			db.run(sql_query,function (err) {
+				if (err) {json_data = JSON.stringify(err,null,' ');return;}
+				json_data = "DB UPDATED!";
+				event.emit('god_hand_return',json_data)
+			})
+			break;
+		default:
+			json_data = "Mode in [READ] or [INSERT]";
+			event.emit('god_hand_return',json_data)
+	}
+}
 
 //make a time stamp like 2016-01-06 04:41:13.636
 function time_stamp () {

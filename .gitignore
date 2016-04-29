@@ -34,3 +34,4 @@ ini.json
 
 # temp upload files
 temp
+*.sqlite3-journal

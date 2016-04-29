@@ -2,9 +2,11 @@
 "engine" : "java",
 "entrance" : "test" ,
 "exec" : "java test",
+"argv" : ["Java","Test"],
+"exec_mode" : false,
 "keep_run" : true,
 "auto_sample" : {"freq":3000,"keyword":"my_java_test"},
 "multiprocess":true,
-"real_time": {"req": true , "res": false},
+"real_time": {"report": false , "control": false},
 "author" : "YOUR.org"
 }

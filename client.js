@@ -71,13 +71,13 @@ event.on('reg_ready',function () {
 			return;
 	  }else {
 			event.emit('config_check_ready',instr_data);
-			event.emit('ready_to_connect');
+			//event.emit('ready_to_connect');
 	  }
 	});
 });
-event.on('ready_to_connect',function () {
-
-})
+//event.on('ready_to_connect',function () {
+//
+//})
 
 event.on('config_check_ready',function (instr_data) {
 	if (instr_data.length!=0) {
@@ -118,43 +118,95 @@ event.on('instr_list_ready',function () {
 			var config_json = JSON.parse(fs.readFileSync(temp_path, 'utf8'));
 			/* give all objs start function */
 			active_instrs[i].config_json=config_json;
-			active_instrs[i].spawn=spawn_process(config_json,active_instrs[i].config,__dirname,configs_path,active_instrs[i].mac_addr);
-			active_instrs[i].running = function() {
-				var spawn = this.spawn;
-				var keyword = this.config_json.auto_sample.keyword;
-				var freq = this.config_json.auto_sample.freq;
-				var config = this.config;
-				var instr_name = this.instr_name;
-				spawn.stdout.on('data', function(data){
-					console.log('['+instr_name+']' +data.toString());
-					cached_data.push({
-						instr_name :instr_name,
-						sample_time: time_stamp(),
-						raw_data:data.toString().replace(/\r?\n/g,""),
-						pushed:0});
-				});
-
-				spawn.stderr.on('data',function(data) {
-					console.error("Error!! \n"+data)
-					cached_data.push({
-						instr_name :instr_name,
-						sample_time: time_stamp(),
-						raw_data:'[Error:]'+data.toString().replace(/\r?\n/g,""),
-						pushed:0});
-				})
-
-				spawn.on('close', function (code) {
-					console.log(config + ' is exited : '+code);
-				});
-
-				setInterval(function () {
-					try {
-						spawn.stdin.write(keyword+"\n");//must end by "\n"
-					} catch (e) {
-						console.error(e);
+			console.log(active_instrs[i].config_json.real_time);
+			if (active_instrs[i].config_json.exec_mode) {
+				active_instrs[i].running = function() {
+					var instr_name = this.instr_name;
+					var freq = this.config_json.auto_sample.freq;
+					var exec_command = "cd "+__dirname+configs_path+'/'+active_instrs[i].config +" & " ;
+					exec_command += active_instrs[i].config_json.exec;
+					var argv_leng = active_instrs[i].config_json.argv.length
+					if (argv_leng > 0) {
+						for (var j = 0; j < argv_leng; i++) {
+							exec_command += " ";
+							exec_command += active_instrs[i].config_json.argv[j];
+						}
 					}
-				},freq);
-			};
+					setInterval(function () {
+						try {
+							var exec_process = child_process.exec(exec_command,function(error, stdout, stderr) {
+								var data = stdout;
+								if (error) {
+									data = stderr;
+									console.error('['+instr_name+']' +'Error!!\n' + stderr);
+								}else {
+									//var dir_index = parseInt(__dirname.length/2);
+									//console.log(parseInt(__dirname.length/2));
+									//console.log(stdout.toString().indexOf(__dirname.slice(dir_index)));
+									var std_arr = stdout.toString().split('\n')
+									//console.log('['+instr_name+']');
+									//console.log('0:'+std_arr[0]);
+									//console.log('1:'+std_arr[1]);
+									//console.log('2:'+std_arr[2])
+									data = std_arr[std_arr.length-1];
+									if (data == "") {
+										data = std_arr[std_arr.length-2]
+									}
+									//data = std_arr[std_arr.length-2]
+									console.log('['+instr_name+']'+data);
+									// cmd will show alot of things like "c:\>user\"
+								}
+								cached_data.push({
+									instr_name :instr_name,
+									sample_time: time_stamp(),
+									raw_data:data.toString().replace(/\r?\n/g,""),
+									pushed:0});
+							})
+						} catch (e) {
+							console.error('['+instr_name+']' +"Error!! \n"+e);
+						}
+					},freq);
+				}
+			}else {
+				active_instrs[i].spawn=spawn_process(config_json,active_instrs[i].config,__dirname,configs_path,active_instrs[i].mac_addr);
+				active_instrs[i].running = function() {
+					var spawn = this.spawn;
+					var keyword = this.config_json.auto_sample.keyword;
+					var freq = this.config_json.auto_sample.freq;
+					var config = this.config;
+					var instr_name = this.instr_name;
+					spawn.stdout.setEncoding('utf8');
+					spawn.stdout.on('data', function(data){
+						console.log('['+instr_name+']' +data.toString());
+						cached_data.push({
+							instr_name :instr_name,
+							sample_time: time_stamp(),
+							raw_data:data.toString().replace(/\r?\n/g,""),
+							pushed:0});
+					});
+
+					spawn.stderr.on('data',function(data) {
+						console.error('['+instr_name+']' +"Error!! \n"+data)
+						cached_data.push({
+							instr_name :instr_name,
+							sample_time: time_stamp(),
+							raw_data:'[Error:]'+data.toString().replace(/\r?\n/g,""),
+							pushed:0});
+					})
+
+					spawn.on('close', function (code) {
+						console.log(config + ' is exited : '+code);
+					});
+
+					setInterval(function () {
+						try {
+							spawn.stdin.write(keyword+"\n");//must end by "\n"
+						} catch (e) {
+							console.error('['+instr_name+']' +"Error!! \n"+e);
+						}
+					},freq);
+				};
+			}
 		}
 	}
 	event.emit('instr_setup_ready')
@@ -248,22 +300,11 @@ event.on('instr_activited',function () {
 	})
 
 	socket.on('god_hand',function (mode,sql_query) {
-		//console.log("[god_hand]"+mode);
-		//console.log("[god_hand]"+sql_query);
-		//var god_hand_return = god_hand(mode,sql_query);
-		//console.log("[god_hand]"+god_hand_return);
 		god_hand(mode,sql_query);
 		event.on('god_hand_return',function (json_data) {
-			//console.log("[god_hand_return]"+json_data);
 			socket.emit('god_hand_return',json_data);
 		})
 	})
-	//del_old_data(20);//it is a test
-	//god_hand test
-//	god_hand("show","SELECT * FROM instrument_table ORDER BY id DESC");
-//	event.on('god_hand_return',function (json_data) {
-//		console.log("[god_hand_return]"+json_data);
-//	})
 })
 
 
@@ -403,6 +444,7 @@ function force_push(number) {
 	})
 }
 
+//god_hand which can oprate db remote
 function god_hand(mode,sql_query) {
 	var json_data;
 	switch (mode) {
@@ -410,13 +452,9 @@ function god_hand(mode,sql_query) {
 		case "SHOW":
 		case "read":
 		case "show":
-		//console.log(mode);
 			db.all(sql_query,function (err,data) {
 				if (err) {json_data = JSON.stringify(err,null,' ');return;}
-				//console.log(data);
 				json_data = JSON.stringify(data,null,' ');
-				//console.log(json_data);
-				//return json_data;
 				event.emit('god_hand_return',json_data)
 			})
 			break;

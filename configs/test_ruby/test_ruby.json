@@ -2,9 +2,11 @@
 "engine" : "ruby",
 "entrance" : "test5.rb" ,
 "exec" : "ruby test5.rb",
+"exec_mode" : false,
+"argv" : [],
 "keep_run" : true,
 "auto_sample" : {"freq":3000,"keyword":"my_rb_test"},
 "multiprocess":true,
-"real_time": {"req": true , "res": false},
+"real_time": {"report": false , "control": false},
 "author" : "YOUR.org"
 }

@@ -2,9 +2,11 @@
 "engine" : "node",
 "entrance" : "test2.js" ,
 "exec" : "node test2",
+"argv" : ["node", "argv"],
+"exec_mode" : false,
 "keep_run" : false,
 "auto_sample" : {"freq":3000,"keyword":"my_node_test"},
 "multiprocess":true,
-"real_time": {"req": true , "res": false},
+"real_time": {"report": false , "control": false},
 "author" : "YOUR.org"
 }

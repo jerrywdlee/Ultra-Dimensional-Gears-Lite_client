@@ -1,5 +1,5 @@
 # coding: utf-8
-Encoding.default_external = 'UTF-8'
+# Encoding.default_external = 'UTF-8' #will be error
 # must disable buffling
 STDOUT.sync = true
 while true do
@@ -8,4 +8,3 @@ while true do
 	putc val
 	puts val
 end
-

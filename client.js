@@ -132,7 +132,7 @@ event.on('instr_list_ready',function () {
 							exec_command += active_instrs[i].config_json.argv[j];
 						}
 					}
-					setInterval(function () {
+					var runner = setInterval(function () {
 						try {
 							var exec_process = child_process.exec(exec_command,function(error, stdout, stderr) {
 								var data = stdout;
@@ -166,6 +166,13 @@ event.on('instr_list_ready',function () {
 							console.error('['+instr_name+']' +"Error!! \n"+e);
 						}
 					},freq);
+					//runner killer
+					event.on('kill_runner',function (name) {
+						//console.log("KILL22 "+instr_name);
+						if (name === instr_name) {
+							clearInterval(runner);
+						}
+					})
 				}
 			}else {
 				active_instrs[i].spawn=spawn_process(config_json,active_instrs[i].config,__dirname,configs_path,active_instrs[i].mac_addr);
@@ -196,17 +203,36 @@ event.on('instr_list_ready',function () {
 
 					spawn.on('close', function (code) {
 						console.log(config + ' is exited : '+code);
+						//this.available=false
+						//clearInterval(runner);//auto runner exited
+						//event.emit('delete_active_instr',instr_name)
+						event.emit("kill_runner",instr_name)
+						//test code
+						//event.emit("kill_runner",'test_cmd') //ok!
 					});
 
-					setInterval(function () {
+					var runner = setInterval(function () {
 						try {
 							spawn.stdin.write(keyword+"\n");//must end by "\n"
 						} catch (e) {
 							console.error('['+instr_name+']' +"Error!! \n"+e);
 						}
 					},freq);
+
+					event.on('kill_runner',function (name) {
+						//console.log("KILL22 "+instr_name);
+						if (name === instr_name) {
+							clearInterval(runner);
+						}
+					})
 				};
 			}
+			//active_instrs[i].kill_runner = function () {
+			//	var instr_name = this.instr_name;
+			//	event.on('kill_runner',function () {
+			//		console.log("KILL "+instr_name);
+			//	})
+			//}
 		}
 	}
 	event.emit('instr_setup_ready')
@@ -216,6 +242,7 @@ event.on('instr_setup_ready',function () {
 	for (var i in active_instrs) {
 		if (active_instrs[i].available) {
 			active_instrs[i].running()
+			//active_instrs[i].kill_runner()//listener of runner killer
 		};
 	};
 	event.emit('instr_activited')

@@ -33,6 +33,10 @@ function spawn_process (config_json,config_name,dir_path,configs_path,mac_addr) 
 			var entrance_array =  [temp_entrance].concat(config_json.argv);
 			return child.spawn( 'ruby', entrance_array,{stdio:[ 'pipe',null,null, 'pipe' ]});
 			break;
+		case 'c_exe':
+			var entrance_array = config_json.argv;
+			return child.spawn( temp_entrance, entrance_array,{stdio:[ 'pipe',null,null, 'pipe' ]});
+			break;
 		default:
 			var entrance_array =  [temp_entrance].concat(config_json.argv);
 			return child.spawn( config_json.engine,entrance_array,{stdio:[ 'pipe',null,null, 'pipe' ]});

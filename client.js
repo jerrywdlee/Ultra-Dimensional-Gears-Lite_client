@@ -286,6 +286,11 @@ event.on('instr_list_ready',function () {
 					var kill_runner = function (name) {
 						if (name === instr_name||name==="ALL") {
 							clearInterval(runner);
+							try {
+								spawn.kill()
+							} catch (e) {
+
+							}
 							// prevernt EventEmitter memory leak
 							event.removeListener('kill_runner', kill_runner);
 						}
@@ -433,7 +438,7 @@ event.on('instr_activited',function () {
 				if (active_instrs[instr_name].config_json.exec_mode) {
 					event.emit('real_time_control',instr_name,msg)
 				}else if (active_instrs[instr_name].spawn) {
-					console.log(active_instrs[instr_name].config);
+					//console.log(active_instrs[instr_name].config);
 					real_time_instrs[instr_name].spawn = spawn_process(real_time_instrs[instr_name].config_json,
 						real_time_instrs[instr_name].config,__dirname,configs_path,real_time_instrs[instr_name].mac_addr);
 					//real_time_instrs[instr_name].spawn = active_instrs[instr_name].spawn;
@@ -469,6 +474,7 @@ event.on('instr_activited',function () {
 
 					spawn_realtime.on('close', function (code) {
 						console.log(instr_name + ' is exited : '+code);
+						socket.emit('real_time_report',instr_name + ' is exited : '+code);
 					});
 				}else {
 					socket.emit('real_time_report',"Cannot Initiate Device : "+instr_name);
@@ -477,7 +483,18 @@ event.on('instr_activited',function () {
 				event.emit('real_time_control',instr_name,msg)
 			}
 		})
+		socket.on('real_time_kill',function (instr_name) {
+			try {
+				if (active_instrs[instr_name].config_json.exec_mode) {
+				}else {
+					real_time_instrs[instr_name].spawn.kill()
+					real_time_instrs[instr_name] = null
+				}
+			} catch (e) {
 
+			}
+
+		})
 		event.on('real_time_control',function (instr_name,msg) {
 			if (active_instrs[instr_name].config_json.exec_mode) {
 				real_time_instrs[instr_name].msg = msg;
@@ -525,9 +542,9 @@ event.on('instr_activited',function () {
 					}
 				});
 			}else {
-				var spawn = real_time_instrs[instr_name].spawn;
+				var spawn_realtime = real_time_instrs[instr_name].spawn;
 				try {
-					spawn.stdin.write(msg+"\n");//must end by "\n"
+					spawn_realtime.stdin.write(msg+"\n");//must end by "\n"
 				} catch (e) {
 					console.error('['+instr_name+']' +"Error!! \n"+e);
 				}

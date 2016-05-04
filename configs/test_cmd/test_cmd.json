@@ -2,9 +2,12 @@
 "engine" : "cmd.exe",
 "entrance" : "test4.bat" ,
 "exec" : "test4.bat",
+"exec_mode" : true,
+"argv" : [],
 "keep_run" : true,
-"auto_sample" : {"freq":3000,"keyword":"my_cmd_test"},
+"auto_sample" : {"freq":4000,"keyword":"my_cmd_test"},
 "multiprocess":true,
-"real_time": {"req": true , "res": false},
+"real_time": {"report": false , "control": false},
+"db_record":{"real_time":false,"auto_sample":true},
 "author" : "YOUR.org"
 }

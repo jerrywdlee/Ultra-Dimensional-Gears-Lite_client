@@ -36,6 +36,7 @@ var reg_flag = fs.readdirSync('./').indexOf('ini.json')===-1?false:true;
 var server_remoting = false;//if remoted by server set it to true
 var socket_checker = false;//socket checker;
 var socket;
+var socket_listeners;
 
 //store of activited objs
 var active_instrs = {};
@@ -45,7 +46,10 @@ var cached_data = [];
 var cache_size = 50;
 //cache watch dog
 var watch_frequency = 60*1000; //watch cache size every minute
+//real_time device
+var real_time_instrs = {};
 
+var spawn_process = require('./dg_modules/spawn_process');
 
 event.on('reg_ready',function () {
 	//connect to db
@@ -71,13 +75,13 @@ event.on('reg_ready',function () {
 			return;
 	  }else {
 			event.emit('config_check_ready',instr_data);
-			event.emit('ready_to_connect');
+			//event.emit('ready_to_connect');
 	  }
 	});
 });
-event.on('ready_to_connect',function () {
-
-})
+//event.on('ready_to_connect',function () {
+//
+//})
 
 event.on('config_check_ready',function (instr_data) {
 	if (instr_data.length!=0) {
@@ -109,52 +113,205 @@ event.on('config_check_ready',function (instr_data) {
 });
 
 event.on('instr_list_ready',function () {
+	/*** auto_sample ***/
 	for (var i in active_instrs) {
 		if (active_instrs[i].available) {
+			//console.log("======= if_running "+!active_instrs[i].if_running);
 			//use spawn_process, need configs_path
-			var spawn_process = require('./dg_modules/spawn_process');
+			//var spawn_process = require('./dg_modules/spawn_process');
 			//must use __dirname
 			var temp_path = __dirname+configs_path+'/'+active_instrs[i].config+'/'+active_instrs[i].config+'.json';
+			//var config_json
+			//try {
 			var config_json = JSON.parse(fs.readFileSync(temp_path, 'utf8'));
+			//} catch (e) {
+			//	console.error(e);
+			//	continue;
+			//}
 			/* give all objs start function */
 			active_instrs[i].config_json=config_json;
-			active_instrs[i].spawn=spawn_process(config_json,active_instrs[i].config,__dirname,configs_path,active_instrs[i].mac_addr);
-			active_instrs[i].running = function() {
-				var spawn = this.spawn;
-				var keyword = this.config_json.auto_sample.keyword;
-				var freq = this.config_json.auto_sample.freq;
-				var config = this.config;
-				var instr_name = this.instr_name;
-				spawn.stdout.on('data', function(data){
-					console.log('['+instr_name+']' +data.toString());
-					cached_data.push({
-						instr_name :instr_name,
-						sample_time: time_stamp(),
-						raw_data:data.toString().replace(/\r?\n/g,""),
-						pushed:0});
-				});
-
-				spawn.stderr.on('data',function(data) {
-					console.error("Error!! \n"+data)
-					cached_data.push({
-						instr_name :instr_name,
-						sample_time: time_stamp(),
-						raw_data:'[Error:]'+data.toString().replace(/\r?\n/g,""),
-						pushed:0});
-				})
-
-				spawn.on('close', function (code) {
-					console.log(config + ' is exited : '+code);
-				});
-
-				setInterval(function () {
-					try {
-						spawn.stdin.write(keyword+"\n");//must end by "\n"
-					} catch (e) {
-						console.error(e);
+			//console.log(active_instrs[i].config_json.real_time);
+			if (config_json.exec_mode && config_json.auto_sample) {
+				//console.log("{"+i+"} : "+active_instrs[i].config_json.exec_mode);
+				active_instrs[i].running = function() {
+					var instr_name = this.instr_name;
+					var freq = this.config_json.auto_sample.freq;
+					//var real_time = this.config_json.real_time;
+					var exec_command = "cd "+__dirname+configs_path+'/'+active_instrs[instr_name].config +" & " ;
+					exec_command += active_instrs[instr_name].config_json.exec;
+					var argv_leng = active_instrs[instr_name].config_json.argv.length
+					if (argv_leng > 0) {
+						for (var j = 0; j < argv_leng; j++) {
+							exec_command += " ";
+							exec_command += active_instrs[instr_name].config_json.argv[j];
+						}
 					}
-				},freq);
-			};
+					var runner = setInterval(function () {
+						try {
+							var exec_process = child_process.exec(exec_command,function(error, stdout, stderr) {
+								var data = stdout;
+								if (error) {
+									data = stderr;
+									console.error('['+instr_name+']' +'Error!!\n' + stderr);
+									var temp_err_obj = {
+										instr_name :instr_name,
+										sample_time: time_stamp(),
+										raw_data:'[Error:]'+stderr.toString().replace(/\r?\n/g,""),
+										pushed:0};
+										if (active_instrs[instr_name].config_json.real_time.report) {
+											console.log(temp_err_obj);
+											socket.emit('real_time_report',JSON.stringify(temp_err_obj,null,' '));
+										}
+										if (active_instrs[instr_name].config_json.db_record.auto_sample) {
+											cached_data.push(temp_err_obj);
+										}
+										//cached_data.push(temp_err_obj);
+
+								}else {
+									//cmd will return alot of things
+									//var dir_index = parseInt(__dirname.length/2);
+									//console.log(parseInt(__dirname.length/2));
+									//console.log(stdout.toString().indexOf(__dirname.slice(dir_index)));
+									var std_arr = stdout.toString().split('\n')
+									//console.log('['+instr_name+']');
+									//console.log('0:'+std_arr[0]);
+									//console.log('1:'+std_arr[1]);
+									//console.log('2:'+std_arr[2])
+									data = std_arr[std_arr.length-1];
+									if (data == "") {
+										data = std_arr[std_arr.length-2]
+									}
+									//data = std_arr[std_arr.length-2]
+									console.log('['+instr_name+']'+data);
+									// cmd will show alot of things like "c:\>user\"
+								}
+								var temp_data_obj = {
+									instr_name :instr_name,
+									sample_time: time_stamp(),
+									raw_data:data.toString().replace(/\r?\n/g,""),
+									pushed:0};
+								if (active_instrs[instr_name].config_json.real_time.report) {
+									console.log(temp_data_obj);
+									socket.emit('real_time_report',JSON.stringify(temp_data_obj,null,' '));
+								}
+								if (active_instrs[instr_name].config_json.db_record.auto_sample) {
+									cached_data.push(temp_data_obj);
+								}
+								//cached_data.push(temp_data_obj);
+							})
+						} catch (e) {
+							console.error('['+instr_name+']' +"Error!! \n"+e);
+						}
+					},freq);
+					//runner killer
+					var kill_runner = function (name) {
+						if (name === instr_name||name==="ALL") {
+							clearInterval(runner);
+							// prevernt EventEmitter memory leak
+							event.removeListener('kill_runner', kill_runner);
+						}
+					}
+					event.on('kill_runner',kill_runner)
+					/*
+					event.on('kill_runner',function (name) {
+						//console.log("KILL22 "+instr_name);
+						if (name === instr_name||name==="ALL") {
+							clearInterval(runner);
+						}
+					})
+					*/
+				}
+			}else if(active_instrs[i].config_json.auto_sample){
+				active_instrs[i].spawn=spawn_process(config_json,active_instrs[i].config,__dirname,configs_path,active_instrs[i].mac_addr);
+				active_instrs[i].running = function() {
+					var spawn = this.spawn;
+					var keyword = this.config_json.auto_sample.keyword;
+					var freq = this.config_json.auto_sample.freq;
+					var config = this.config;
+					var instr_name = this.instr_name;
+					var real_time = this.config_json.real_time;
+					//console.log(real_time);
+					spawn.stdout.setEncoding('utf8');
+					spawn.stdout.on('data', function(data){
+						var temp_data_obj = {
+							instr_name :instr_name,
+							sample_time: time_stamp(),
+							raw_data:data.toString().replace(/\r?\n/g,""),
+							pushed:0};
+						console.log('['+instr_name+']' +data.toString());
+						if (active_instrs[instr_name].config_json.real_time.report) {
+							console.log(temp_data_obj);
+							socket.emit('real_time_report',JSON.stringify(temp_data_obj,null,' '));
+						}
+						if (active_instrs[instr_name].config_json.db_record.auto_sample) {
+							cached_data.push(temp_data_obj);
+						}
+					});
+
+					spawn.stderr.on('data',function(data) {
+						var temp_err_obj = {
+							instr_name :instr_name,
+							sample_time: time_stamp(),
+							raw_data:'[Error:]'+data.toString().replace(/\r?\n/g,""),
+							pushed:0};
+						console.error('['+instr_name+']' +"Error!! \n"+data)
+						if (active_instrs[instr_name].config_json.real_time.report) {
+							console.log(temp_err_obj);
+							socket.emit('real_time_report',JSON.stringify(temp_err_obj,null,' '));
+						}
+						if (active_instrs[instr_name].config_json.db_record.auto_sample) {
+							cached_data.push(temp_err_obj);
+						}
+					})
+
+					spawn.on('close', function (code) {
+						console.log(config + ' is exited : '+code);
+						//this.available=false
+						//clearInterval(runner);//auto runner exited
+						//event.emit('delete_active_instr',instr_name)
+						event.emit("kill_runner",instr_name)
+						//test code
+						//event.emit("kill_runner",'test_cmd') //ok!
+					});
+
+					var runner = setInterval(function () {
+						try {
+							spawn.stdin.write(keyword+"\n");//must end by "\n"
+						} catch (e) {
+							console.error('['+instr_name+']' +"Error!! \n"+e);
+						}
+					},freq);
+
+					//runner killer
+					var kill_runner = function (name) {
+						if (name === instr_name||name==="ALL") {
+							clearInterval(runner);
+							try {
+								spawn.kill()
+							} catch (e) {
+
+							}
+							// prevernt EventEmitter memory leak
+							event.removeListener('kill_runner', kill_runner);
+						}
+					}
+					event.on('kill_runner',kill_runner)
+					/*
+					event.on('kill_runner',function (name) {
+						//console.log("KILL22 "+instr_name);
+						if (name === instr_name||name==="ALL") {
+							clearInterval(runner);
+						}
+					})
+					*/
+				};
+			}
+			//active_instrs[i].kill_runner = function () {
+			//	var instr_name = this.instr_name;
+			//	event.on('kill_runner',function () {
+			//		console.log("KILL "+instr_name);
+			//	})
+			//}
 		}
 	}
 	event.emit('instr_setup_ready')
@@ -162,8 +319,13 @@ event.on('instr_list_ready',function () {
 
 event.on('instr_setup_ready',function () {
 	for (var i in active_instrs) {
-		if (active_instrs[i].available) {
+		if (active_instrs[i].available&&active_instrs[i].config_json.auto_sample) {
+			//console.log("---==== if_running "+ !active_instrs[i].if_running);
+			//console.log("=====running "+i);
 			active_instrs[i].running()
+			//active_instrs[i].if_running = true;
+			//console.log("+++==== if_running "+ !active_instrs[i].if_running);
+			//active_instrs[i].kill_runner()//listener of runner killer
 		};
 	};
 	event.emit('instr_activited')
@@ -174,79 +336,222 @@ event.on('instr_activited',function () {
 	//load ini.json and connect to server
 	var ini_json = load_ini_json();
 	console.log("Connecting to : "+ini_json.server_url);
-	socket = socket_io.connect(ini_json.server_url);
+	if (!socket) {
+		socket = socket_io.connect(ini_json.server_url);
+	}
 	console.log( sha_256(ini_json.password));//test, waitting for https
+
+	/* test code */
+	setTimeout(function () {
+		console.log("================================================");
+		//active_instrs["test_rb"].config_json.real_time.report = true
+		//event.emit('restart')
+	},10000)
+	/* test code end */
+
 	/*** Here is running logics ***/
-	socket.on('error', function(err) {
-	    console.log(err);
-	    socket_checker=false;
-	});
-	socket.on('connect', function() {
-		console.log('Client Connected to Server');
-		socket_checker=true;
-		get_instr_status();
-		socket.emit('instr_status',instr_list);
-	});
-
-	socket.on('disconnect',function() {
-	    console.log('Disconnected from Server')
-	    socket_checker=false;
-	});
-
-	socket.on('instr_status',function() {
-		get_instr_status();
-		socket.emit('instr_status',instr_list);
-	});
-
-	socket.on('local_admin_page',function() {
-	});
-	// for server to caculate Network delay
-	socket.on('ping',function(data){
-	    //var timeServer = Date.now();
-	    if (data) { //avoid an undefined emit
-	    	console.log("pinged "+data);
-	    	socket.emit('pong_client',data);//why same pong only work on html
-	    };
-	});
-
-	socket.on('unpushed_num',function () {
-		unpushed_num();
-	})
-	event.on('unpushed_num',function (num) {
-		console.log(num+" Records Unpushed.");
-		socket.emit('sum_unpushed',num);
-	})
-
-	socket.on('force_push',function (max) {
-		force_push(max);
-	})
-	event.on('unpushed_data',function (data) {
-		data.forEach(function (temp_data) {
-			temp_data.pushed=1;
-		})
-		console.log(data);
-		socket.emit('return_force_push',JSON.stringify(data,null,' '))
-	})
-
-	socket.on('reg',function () {
-		console.log("reg");
-		var reg_spawn = child_process.spawn( 'node', ['./reg.js'],{stdio:[ 'pipe',null,null, 'pipe' ]});
-		reg_spawn.stdout.on('data', function(data){
-				socket.emit('reg_log',"[Reg log]"+data)
+	if (!socket_listeners) {
+		socket_listeners = true;
+		socket.on('error', function(err) {
+				console.log(err);
+				socket_checker=false;
 		});
-		reg_spawn.stderr.on('data',function(data) {
-			socket.emit('reg_log',"Error!! \n"+data)
+		socket.on('connect', function() {
+			console.log('Client Connected to Server');
+			socket_checker=true;
+			get_instr_status();
+			socket.emit('instr_status',instr_list);
 		});
-		reg_spawn.on('close', function (code) {
-			console.log();
-			socket.emit('reg_log','Register is exited : '+code)
-			event.emit('started');//restart
+
+		socket.on('disconnect',function() {
+				console.log('Disconnected from Server')
+				socket_checker=false;
+		});
+
+		socket.on('instr_status',function() {
+			get_instr_status();
+			socket.emit('instr_status',instr_list);
+		});
+
+		socket.on('local_admin_page',function() {
+		});
+		// for server to caculate Network delay
+		socket.on('ping',function(data){
+				//var timeServer = Date.now();
+				if (data) { //avoid an undefined emit
+					console.log("pinged "+data);
+					socket.emit('pong_client',data);//why same pong only work on html
+				};
+		});
+
+		socket.on('unpushed_num',function () {
+			unpushed_num();
 		})
-		socket.on('reg_kill',function () {
-			reg_spawn.kill();
+		event.on('unpushed_num',function (num) {
+			console.log(num+" Records Unpushed.");
+			socket.emit('sum_unpushed',num);
 		})
-	})
-	//del_old_data(20);//it is a test
+
+		socket.on('force_push',function (max) {
+			force_push(max);
+		})
+		event.on('unpushed_data',function (data) {
+			data.forEach(function (temp_data) {
+				temp_data.pushed=1;
+			})
+			console.log(data);
+			socket.emit('return_force_push',JSON.stringify(data,null,' '))
+		})
+
+		socket.on('reg',function () {
+			console.log("reg");
+			var reg_spawn = child_process.spawn( 'node', ['./reg.js'],{stdio:[ 'pipe',null,null, 'pipe' ]});
+			reg_spawn.stdout.on('data', function(data){
+					socket.emit('reg_log',"[Reg log]"+data)
+			});
+			reg_spawn.stderr.on('data',function(data) {
+				socket.emit('reg_log',"Error!! \n"+data)
+			});
+			reg_spawn.on('close', function (code) {
+				console.log();
+				socket.emit('reg_log','Register is exited : '+code)
+				event.emit('restart');//restart
+			})
+			socket.on('reg_kill',function () {
+				reg_spawn.kill();
+			})
+		})
+
+		socket.on('god_hand',function (mode,sql_query) {
+			god_hand(mode,sql_query);
+			event.on('god_hand_return',function (json_data) {
+				socket.emit('god_hand_return',json_data);
+			})
+		})
+
+		socket.on('real_time_control',function (instr_name,msg) {
+			if (!real_time_instrs[instr_name]) {
+				real_time_instrs[instr_name] = {};
+				real_time_instrs[instr_name].config_json = active_instrs[instr_name].config_json;
+				real_time_instrs[instr_name].config = active_instrs[instr_name].config;
+				real_time_instrs[instr_name].mac_addr = active_instrs[instr_name].mac_addr
+				if (active_instrs[instr_name].config_json.exec_mode) {
+					event.emit('real_time_control',instr_name,msg)
+				}else if (active_instrs[instr_name].spawn) {
+					//console.log(active_instrs[instr_name].config);
+					real_time_instrs[instr_name].spawn = spawn_process(real_time_instrs[instr_name].config_json,
+						real_time_instrs[instr_name].config,__dirname,configs_path,real_time_instrs[instr_name].mac_addr);
+					//real_time_instrs[instr_name].spawn = active_instrs[instr_name].spawn;
+					var spawn_realtime = real_time_instrs[instr_name].spawn
+					spawn_realtime.stdout.setEncoding('utf8');
+					spawn_realtime.stdout.on('data', function(data){
+						var temp_data_obj = {
+							instr_name :instr_name,
+							sample_time: time_stamp(),
+							raw_data:data.toString().replace(/\r?\n/g,""),
+							pushed:0};
+						console.log('['+instr_name+']' +data.toString());
+						//socket.emit('real_time_report',JSON.stringify(temp_data_obj,null,' '));
+						socket.emit('real_time_report',temp_data_obj);
+						if (active_instrs[instr_name].config_json.db_record.real_time) {
+							cached_data.push(temp_data_obj);
+						}
+					});
+
+					spawn_realtime.stderr.on('data',function(data) {
+						var temp_err_obj = {
+							instr_name :instr_name,
+							sample_time: time_stamp(),
+							raw_data:'[Error:]'+data.toString().replace(/\r?\n/g,""),
+							pushed:0};
+						console.error('['+instr_name+']' +"Error!! \n"+data)
+
+						socket.emit('real_time_report',JSON.stringify(temp_err_obj,null,' '));
+						if (active_instrs[instr_name].config_json.db_record.real_time) {
+							cached_data.push(temp_err_obj);
+						}
+					})
+
+					spawn_realtime.on('close', function (code) {
+						console.log(instr_name + ' is exited : '+code);
+						socket.emit('real_time_report',instr_name + ' is exited : '+code);
+					});
+				}else {
+					socket.emit('real_time_report',"Cannot Initiate Device : "+instr_name);
+				}
+			}else {
+				event.emit('real_time_control',instr_name,msg)
+			}
+		})
+		socket.on('real_time_kill',function (instr_name) {
+			try {
+				if (active_instrs[instr_name].config_json.exec_mode) {
+				}else {
+					real_time_instrs[instr_name].spawn.kill()
+					real_time_instrs[instr_name] = null
+				}
+			} catch (e) {
+
+			}
+
+		})
+		event.on('real_time_control',function (instr_name,msg) {
+			if (active_instrs[instr_name].config_json.exec_mode) {
+				real_time_instrs[instr_name].msg = msg;
+				//real_time_instrs[instr_name].spawn;
+				var exec_command = "cd "+__dirname+configs_path+'/'+active_instrs[instr_name].config +" & " ;
+				exec_command += active_instrs[instr_name].config_json.exec;
+				//exec_command += " "+msg;
+				real_time_instrs[instr_name].exec_command = exec_command;
+				real_time_instrs[instr_name].msg = msg;
+				real_time_instrs[instr_name].spawn =
+				child_process.exec(real_time_instrs[instr_name].exec_command+" "+real_time_instrs[instr_name].msg,
+					function(error, stdout, stderr) {
+					var data = stdout;
+					if (error) {
+						data = stderr;
+						console.error('['+instr_name+']' +'Error!!\n' + stderr);
+						var temp_err_obj = {
+							instr_name :instr_name,
+							sample_time: time_stamp(),
+							raw_data:'[Error:]'+stderr.toString().replace(/\r?\n/g,""),
+							pushed:0};
+
+							socket.emit('real_time_report',JSON.stringify(temp_err_obj,null,' '));
+
+							if (active_instrs[instr_name].config_json.db_record.real_time) {
+								cached_data.push(temp_err_obj);
+							}
+					}else {
+						var std_arr = stdout.toString().split('\n')
+						data = std_arr[std_arr.length-1];
+						if (data == "") {
+							data = std_arr[std_arr.length-2]
+						}
+						console.log('['+instr_name+']'+data);
+						// cmd will show alot of things like "c:\>user\"
+					}
+					var temp_data_obj = {
+						instr_name :instr_name,
+						sample_time: time_stamp(),
+						raw_data:data.toString().replace(/\r?\n/g,""),
+						pushed:0};
+						socket.emit('real_time_report',JSON.stringify(temp_data_obj,null,' '));
+					if (active_instrs[instr_name].config_json.db_record.real_time) {
+						cached_data.push(temp_data_obj);
+					}
+				});
+			}else {
+				var spawn_realtime = real_time_instrs[instr_name].spawn;
+				try {
+					spawn_realtime.stdin.write(msg+"\n");//must end by "\n"
+				} catch (e) {
+					console.error('['+instr_name+']' +"Error!! \n"+e);
+				}
+
+			}
+		})
+	}
 })
 
 
@@ -264,7 +569,7 @@ setInterval(function(){
 	};
 },watch_frequency);
 
-//check db everyday if >1m del 1000 records
+//check db everyday if >1m del 1000 unuploaded records
 setInterval(function () {
 	fs.stat('./client_db.sqlite3',function(err,stats){
 		if (err) {console.error(err);};
@@ -284,7 +589,7 @@ event.on('reg',function () {
 	});
 	reg_spawn.on('close', function (code) {
 		console.log('Register' + ' is exited : '+code);
-		event.emit('started');//restart
+		event.emit('restart');//restart
 	});
 })
 
@@ -300,6 +605,17 @@ event.on('started',function () {
 	}
 })
 
+event.on('restart',function () {
+	event.emit('kill_runner','ALL')//kill all runner
+	setTimeout(function () {
+		active_instrs = {};//clear all running objs
+		//socket.removeAllListeners();
+		//socket.off(Socket.EVENT_CONNECT);
+	},100)
+	setTimeout(function () {
+		event.emit('started')//restart
+	},200)
+})
 
 /* emiter here */
 event.emit('started');//on started , emit 1st event
@@ -378,6 +694,7 @@ function force_push(number) {
 			console.error('DB ERROR'+err);socket.emit('db_error',err);return;
 		}
 		event.emit('unpushed_data',data);
+		//pushed : 0 => pushed : 1
 		db.run(sql_pushed_update,{$number:number},function(err){
 		  if (err) {console.log(err);socket.emit('db_error',err);return;};})
 			var temp_data = data;
@@ -385,6 +702,35 @@ function force_push(number) {
 	})
 }
 
+//god_hand which can oprate db remote
+function god_hand(mode,sql_query) {
+	var json_data;
+	switch (mode) {
+		case "READ":
+		case "SHOW":
+		case "read":
+		case "show":
+			db.all(sql_query,function (err,data) {
+				if (err) {json_data = JSON.stringify(err,null,' ');return;}
+				json_data = JSON.stringify(data,null,' ');
+				event.emit('god_hand_return',json_data)
+			})
+			break;
+		case "INSERT":
+		case "UPDATE":
+		case "WRITE":
+		case "write":
+			db.run(sql_query,function (err) {
+				if (err) {json_data = JSON.stringify(err,null,' ');return;}
+				json_data = "DB UPDATED!";
+				event.emit('god_hand_return',json_data)
+			})
+			break;
+		default:
+			json_data = "Mode in [READ] or [INSERT]";
+			event.emit('god_hand_return',json_data)
+	}
+}
 
 //make a time stamp like 2016-01-06 04:41:13.636
 function time_stamp () {

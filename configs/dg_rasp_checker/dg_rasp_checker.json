@@ -1,0 +1,13 @@
+{
+"engine" : "node",
+"entrance" : "checker_app.js" ,
+"exec" : "node checker_app",
+"argv" : [],
+"exec_mode" : false,
+"keep_run" : true,
+"auto_sample" : {"freq":5000,"keyword":"cpu_temp"},
+"multiprocess":true,
+"real_time": {"report": true , "control": false},
+"db_record":{"real_time":false,"auto_sample":true},
+"author" : "jerrywdlee"
+}

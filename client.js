@@ -156,10 +156,10 @@ event.on('instr_list_ready',function () {
 									var temp_err_obj = {
 										instr_name :instr_name,
 										sample_time: time_stamp(),
-										raw_data:'[Error:]'+stderr.toString().replace(/\r?\n/g,""),
+										raw_data:'[Error:]'+stderr.toString().replace(/[\n\r]/g,""),
 										pushed:0};
 										if (active_instrs[instr_name].config_json.real_time.report) {
-											console.log(temp_err_obj);
+											//console.log(temp_err_obj);
 											socket.emit('real_time_report',JSON.stringify(temp_err_obj,null,' '));
 										}
 										if (active_instrs[instr_name].config_json.db_record.auto_sample) {
@@ -188,10 +188,11 @@ event.on('instr_list_ready',function () {
 								var temp_data_obj = {
 									instr_name :instr_name,
 									sample_time: time_stamp(),
-									raw_data:data.toString().replace(/\r?\n/g,""),
+									//raw_data:data.toString().replace(/\r?\n/g,""), //have bug
+									raw_data:data.toString().replace(/[\n\r]/g,""),
 									pushed:0};
 								if (active_instrs[instr_name].config_json.real_time.report) {
-									console.log(temp_data_obj);
+									//console.log(temp_data_obj);
 									socket.emit('real_time_report',JSON.stringify(temp_data_obj,null,' '));
 								}
 								if (active_instrs[instr_name].config_json.db_record.auto_sample) {
@@ -236,11 +237,12 @@ event.on('instr_list_ready',function () {
 						var temp_data_obj = {
 							instr_name :instr_name,
 							sample_time: time_stamp(),
-							raw_data:data.toString().replace(/\r?\n/g,""),
+							//raw_data:data.toString().replace(/\r?\n/g,""),
+							raw_data:data.toString().replace(/[\n\r]/g,""),
 							pushed:0};
 						console.log('['+instr_name+']' +data.toString());
 						if (active_instrs[instr_name].config_json.real_time.report) {
-							console.log(temp_data_obj);
+							//console.log(temp_data_obj);
 							socket.emit('real_time_report',JSON.stringify(temp_data_obj,null,' '));
 						}
 						if (active_instrs[instr_name].config_json.db_record.auto_sample) {
@@ -252,11 +254,11 @@ event.on('instr_list_ready',function () {
 						var temp_err_obj = {
 							instr_name :instr_name,
 							sample_time: time_stamp(),
-							raw_data:'[Error:]'+data.toString().replace(/\r?\n/g,""),
+							raw_data:'[Error:]'+data.toString().replace(/[\n\r]/g,""),
 							pushed:0};
 						console.error('['+instr_name+']' +"Error!! \n"+data)
 						if (active_instrs[instr_name].config_json.real_time.report) {
-							console.log(temp_err_obj);
+							//console.log(temp_err_obj);
 							socket.emit('real_time_report',JSON.stringify(temp_err_obj,null,' '));
 						}
 						if (active_instrs[instr_name].config_json.db_record.auto_sample) {
@@ -430,57 +432,61 @@ event.on('instr_activited',function () {
 		})
 
 		socket.on('real_time_control',function (instr_name,msg) {
-			if (!real_time_instrs[instr_name]) {
-				real_time_instrs[instr_name] = {};
-				real_time_instrs[instr_name].config_json = active_instrs[instr_name].config_json;
-				real_time_instrs[instr_name].config = active_instrs[instr_name].config;
-				real_time_instrs[instr_name].mac_addr = active_instrs[instr_name].mac_addr
-				if (active_instrs[instr_name].config_json.exec_mode) {
-					event.emit('real_time_control',instr_name,msg)
-				}else if (active_instrs[instr_name].spawn) {
-					//console.log(active_instrs[instr_name].config);
-					real_time_instrs[instr_name].spawn = spawn_process(real_time_instrs[instr_name].config_json,
-						real_time_instrs[instr_name].config,__dirname,configs_path,real_time_instrs[instr_name].mac_addr);
-					//real_time_instrs[instr_name].spawn = active_instrs[instr_name].spawn;
-					var spawn_realtime = real_time_instrs[instr_name].spawn
-					spawn_realtime.stdout.setEncoding('utf8');
-					spawn_realtime.stdout.on('data', function(data){
-						var temp_data_obj = {
-							instr_name :instr_name,
-							sample_time: time_stamp(),
-							raw_data:data.toString().replace(/\r?\n/g,""),
-							pushed:0};
-						console.log('['+instr_name+']' +data.toString());
-						//socket.emit('real_time_report',JSON.stringify(temp_data_obj,null,' '));
-						socket.emit('real_time_report',temp_data_obj);
-						if (active_instrs[instr_name].config_json.db_record.real_time) {
-							cached_data.push(temp_data_obj);
-						}
-					});
+			if (active_instrs[instr_name]) {
+				if (!real_time_instrs[instr_name]) {
+					real_time_instrs[instr_name] = {};
+					real_time_instrs[instr_name].config_json = active_instrs[instr_name].config_json;
+					real_time_instrs[instr_name].config = active_instrs[instr_name].config;
+					real_time_instrs[instr_name].mac_addr = active_instrs[instr_name].mac_addr
+					if (active_instrs[instr_name].config_json.exec_mode) {
+						event.emit('real_time_control',instr_name,msg)
+					}else if (active_instrs[instr_name].spawn) {
+						//console.log(active_instrs[instr_name].config);
+						real_time_instrs[instr_name].spawn = spawn_process(real_time_instrs[instr_name].config_json,
+							real_time_instrs[instr_name].config,__dirname,configs_path,real_time_instrs[instr_name].mac_addr);
+						//real_time_instrs[instr_name].spawn = active_instrs[instr_name].spawn;
+						var spawn_realtime = real_time_instrs[instr_name].spawn
+						spawn_realtime.stdout.setEncoding('utf8');
+						spawn_realtime.stdout.on('data', function(data){
+							var temp_data_obj = {
+								instr_name :instr_name,
+								sample_time: time_stamp(),
+								raw_data:data.toString().replace(/[\n\r]/g,""),
+								pushed:0};
+							console.log('['+instr_name+']' +data.toString());
+							//socket.emit('real_time_report',JSON.stringify(temp_data_obj,null,' '));
+							socket.emit('real_time_report',temp_data_obj);
+							if (active_instrs[instr_name].config_json.db_record.real_time) {
+								cached_data.push(temp_data_obj);
+							}
+						});
 
-					spawn_realtime.stderr.on('data',function(data) {
-						var temp_err_obj = {
-							instr_name :instr_name,
-							sample_time: time_stamp(),
-							raw_data:'[Error:]'+data.toString().replace(/\r?\n/g,""),
-							pushed:0};
-						console.error('['+instr_name+']' +"Error!! \n"+data)
+						spawn_realtime.stderr.on('data',function(data) {
+							var temp_err_obj = {
+								instr_name :instr_name,
+								sample_time: time_stamp(),
+								raw_data:'[Error:]'+data.toString().replace(/[\n\r]/g,""),
+								pushed:0};
+							console.error('['+instr_name+']' +"Error!! \n"+data)
 
-						socket.emit('real_time_report',JSON.stringify(temp_err_obj,null,' '));
-						if (active_instrs[instr_name].config_json.db_record.real_time) {
-							cached_data.push(temp_err_obj);
-						}
-					})
+							socket.emit('real_time_report',JSON.stringify(temp_err_obj,null,' '));
+							if (active_instrs[instr_name].config_json.db_record.real_time) {
+								cached_data.push(temp_err_obj);
+							}
+						})
 
-					spawn_realtime.on('close', function (code) {
-						console.log(instr_name + ' is exited : '+code);
-						socket.emit('real_time_report',instr_name + ' is exited : '+code);
-					});
+						spawn_realtime.on('close', function (code) {
+							console.log(instr_name + ' is exited : '+code);
+							socket.emit('real_time_report',instr_name + ' is exited : '+code);
+						});
+					}else {
+						socket.emit('real_time_report',"Cannot Initiate Device : "+instr_name);
+					}
 				}else {
-					socket.emit('real_time_report',"Cannot Initiate Device : "+instr_name);
+					event.emit('real_time_control',instr_name,msg)
 				}
 			}else {
-				event.emit('real_time_control',instr_name,msg)
+				socket.emit('real_time_report',"No Such Device : "+instr_name);
 			}
 		})
 		socket.on('real_time_kill',function (instr_name) {
@@ -514,7 +520,7 @@ event.on('instr_activited',function () {
 						var temp_err_obj = {
 							instr_name :instr_name,
 							sample_time: time_stamp(),
-							raw_data:'[Error:]'+stderr.toString().replace(/\r?\n/g,""),
+							raw_data:'[Error:]'+stderr.toString().replace(/[\n\r]/g,""),
 							pushed:0};
 
 							socket.emit('real_time_report',JSON.stringify(temp_err_obj,null,' '));
@@ -534,7 +540,7 @@ event.on('instr_activited',function () {
 					var temp_data_obj = {
 						instr_name :instr_name,
 						sample_time: time_stamp(),
-						raw_data:data.toString().replace(/\r?\n/g,""),
+						raw_data:data.toString().replace(/[\n\r]/g,""),
 						pushed:0};
 						socket.emit('real_time_report',JSON.stringify(temp_data_obj,null,' '));
 					if (active_instrs[instr_name].config_json.db_record.real_time) {

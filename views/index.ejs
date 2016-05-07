@@ -2,14 +2,43 @@
 <html>
   <head>
     <title><%= title %> - Setting Device</title>
-    
+    <script type="text/javascript">
+      var if_hide = true
+      var adv_set = document.getElementsByClassName("adv_set");
+      function show_hide() {
+        if (if_hide) {
+          for (var i = 0; i < adv_set.length; i++) {
+            adv_set[i].style.display = 'table-row' //for tr style
+          }
+          document.getElementById('adv_set_btn').innerHTML = "Hide"
+          if_hide = false
+        } else {
+          for (var i = 0; i < adv_set.length; i++) {
+            adv_set[i].style.display = 'none'
+          }
+          document.getElementById('adv_set_btn').innerHTML = "Show"
+          if_hide = true
+        }
+      }
+    </script>
+    <style>
+      input{
+        text-align:right
+      }
+    </style>
   </head>
   <body>
     <h2>Setting [ <%= title %> ]</h2>
     <p>Dear ~ <%= org %> ~</p>
-    <p>Please setup [ <%= title %> ]</p> 
+    <!--
+    <p>Please setup [ <%= title %> ]</p>
+    -->
     <form method="GET" action="/reg_div">
       <table>
+        <tr style="background-color:#CCF;color:#24005b;font-size:1.08em">
+          <th>Please setup</th>
+          <th>[ <%= title %> ]</th>
+        </tr>
         <tr>
           <td>UUID:</td>
           <td>
@@ -36,7 +65,33 @@
           <td>Mail:</td>
           <td><input type="text" name="mail" id="mail" value="<%= mail %>"/></td>
         </tr>
-        
+        <!-- Advanced Settings -->
+        <tr style="background-color:#CCF;">
+          <td style="color:blue">Advanced Settings:</td>
+          <td  align="right">[ <a href="#" id="adv_set_btn" onclick="show_hide()">Show</a> ] </td>
+        </tr>
+        <tr class="adv_set" style="display:none">
+          <td>Cache Size(Min):</td>
+          <td><input type="number" name="cache_size" id="cache_size" value="<%= cache_size %>" required="required"/></td>
+        </tr>
+        <tr class="adv_set" style="display:none">
+          <td>Watch Freq(Sec):</td>
+          <td><input type="number" name="watch_frequency" id="watch_frequency" value="<%= watch_frequency %>" required="required"/></td>
+        </tr>
+        <tr class="adv_set" style="display:none">
+          <td>DB Max Size(KB):</td>
+          <td><input type="number" name="db_size_under" id="db_size_under" value="<%= db_size_under %>" required="required"/></td>
+        </tr>
+        <tr class="adv_set" style="display:none">
+          <td>Check Freq(Hour):</td>
+          <td><input type="number" name="db_check_freq" id="db_check_freq" value="<%= db_check_freq %>" required="required"/></td>
+        </tr>
+        <tr class="adv_set" style="display:none">
+          <td>Auto Del* Num:</td>
+          <td><input type="number" name="auto_del_num" id="auto_del_num" value="<%= auto_del_num %>" required="required"/></td>
+        </tr>
+
+        <!-- Advanced Settings end -->
         <tr>
           <td><button type="button" onclick="location.href='./upload_page'"  >Edit Configs</button></td>
           <td align="right"><input type="submit" value="Regist This Device"/></td>
@@ -54,8 +109,8 @@
           <td align="right"><button type="button" onclick="location.href='./set_db'"  <%=disable %> >Edit DataBase</button></td>
         </tr>
       </table>
-    
-    
-    
+<p class="adv_set" style="display:none"><i>*:Will Not Delete Unpushed Records.</i></p>
+
+
   </body>
 </html>

@@ -63,7 +63,13 @@ index_router.get('/', function(req, res, next) {
               org: ini_json.org || 'Unknow.Org',
               dev_name: ini_json.dev_name || '',
               mail: ini_json.mail || '',
-              password: ini_json.password || 'password'});
+              password: ini_json.password || 'password',
+              cache_size: ini_json.cache_size || 50,
+              watch_frequency: ini_json.watch_frequency || 60,
+              db_check_freq: ini_json.db_check_freq || 24,
+              db_size_under: ini_json.db_size_under || 1024,
+              auto_del_num: ini_json.auto_del_num || 1000,
+              });
 });
 
 //render index page defalt
@@ -279,7 +285,7 @@ app.get('/exit',function(req,res){
 //get local ip address and tell user
 console.log("Please connect to :");
 var ip_reporter = require('./dg_modules/ip_reporter');
-ip_reporter(port);
+ip_reporter(port,true);
 /*
 var ifaces = os.networkInterfaces();
 Object.keys(ifaces).forEach(function (ifname) {

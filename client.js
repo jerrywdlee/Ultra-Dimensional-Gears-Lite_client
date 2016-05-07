@@ -26,9 +26,15 @@ const configs_path = "/configs"
 var configs_list ,instr_list;
 
 //delete data if db too big
-var db_check_freq = 24*60*60*1000; //check db size daily
-var db_size_under = 1*1000*1000; //db bigger than 1M delete data
+const HOUR = 60*60*1000;
+var db_check_freq = 24*HOUR; //check db size daily
+const KB = 1024;
+var db_size_under = 1*KB*KB; //db bigger than 1M delete data
 var auto_del_num = 1000; //auto delete 1000 records
+//cached records' number under ?? not push, better under 500
+var cache_size = 50;
+//cache watch dog
+var watch_frequency = 60*1000; //watch cache size every minute
 
 //a lot of flags
 var db_flag = fs.readdirSync('./').indexOf('client_db.sqlite3')===-1?false:true;
@@ -42,10 +48,7 @@ var socket_listeners;
 var active_instrs = {};
 //cache raw data as js obj
 var cached_data = [];
-//cached records' number under ?? not push, better under 500
-var cache_size = 50;
-//cache watch dog
-var watch_frequency = 60*1000; //watch cache size every minute
+
 //real_time device
 var real_time_instrs = {};
 
@@ -337,6 +340,19 @@ event.on('instr_setup_ready',function () {
 event.on('instr_activited',function () {
 	//load ini.json and connect to server
 	var ini_json = load_ini_json();
+
+	/**To overwrite custom conditions**/
+	db_check_freq = Math.round(parseFloat(ini_json.db_check_freq)*HOUR); //check db size daily
+	db_size_under = Math.round(parseFloat(ini_json.db_size_under)*KB); //db bigger than 1M delete data
+	auto_del_num = parseInt(ini_json.auto_del_num); //auto delete 1000 records
+	//cached records' number under ?? not push, better under 500
+	cache_size = parseInt(ini_json.cache_size);
+	//cache watch dog
+	watch_frequency = Math.round(parseFloat(ini_json.watch_frequency)*1000); //watch cache size every minute
+	console.log("AAAAAA"+watch_frequency+"AAAAAA");
+	setTimeout(function () {
+		event.emit('watch_dog_on')
+	},500)
 	console.log("Connecting to : "+ini_json.server_url);
 	if (!socket) {
 		socket = socket_io.connect(ini_json.server_url);
@@ -344,11 +360,11 @@ event.on('instr_activited',function () {
 	console.log( sha_256(ini_json.password));//test, waitting for https
 
 	/* test code */
-	setTimeout(function () {
-		console.log("================================================");
-		//active_instrs["test_rb"].config_json.real_time.report = true
-		//event.emit('restart')
-	},10000)
+	//setTimeout(function () {
+	//	console.log("================================================");
+	//	//active_instrs["test_rb"].config_json.real_time.report = true
+	//	//event.emit('restart')
+	//},10000)
 	/* test code end */
 
 	/*** Here is running logics ***/
@@ -562,28 +578,36 @@ event.on('instr_activited',function () {
 
 
 //auto push and auto store
-setInterval(function(){
-	if (cached_data.length>cache_size && !server_remoting) {
-		if (socket_checker&&socket) { //if socket is connecting
-			for (var i = cached_data.length - 1; i >= 0; i--) {
-				cached_data[i].pushed = 1;//set if pushed to server
+event.on('watch_dog_on',function () {
+	console.log("BBBBBB "+"watch_frequency : "+watch_frequency);
+	console.log("BBBBBB "+"cache_size : "+cache_size);
+	var push_raw_data = setInterval(function(){
+		if (cached_data.length>cache_size && !server_remoting) {
+			if (socket_checker&&socket) { //if socket is connecting
+				for (var i = cached_data.length - 1; i >= 0; i--) {
+					cached_data[i].pushed = 1;//set if pushed to server
+				};
+				socket.emit('push_raw_data',JSON.stringify(cached_data,null,' '));
 			};
-			socket.emit('push_raw_data',JSON.stringify(cached_data,null,' '));
+			insert_all(cached_data);
+			cached_data=[];//clean cache
 		};
-		insert_all(cached_data);
-		cached_data=[];//clean cache
-	};
-},watch_frequency);
+	},watch_frequency);
 
-//check db everyday if >1m del 1000 unuploaded records
-setInterval(function () {
-	fs.stat('./client_db.sqlite3',function(err,stats){
-		if (err) {console.error(err);};
-		if (stats.size>db_size_under) {
-			del_old_data(auto_del_num);
-		};
+	//check db everyday if >1m del 1000 unuploaded records
+	var db_size_watch = setInterval(function () {
+		fs.stat('./client_db.sqlite3',function(err,stats){
+			if (err) {console.error(err);};
+			if (stats.size>db_size_under) {
+				del_old_data(auto_del_num);
+			};
+		})
+	},db_check_freq)
+	event.on('kill_watch_dog',function() {
+		clearInterval(push_raw_data)
+		clearInterval(db_size_watch)
 	})
-},db_check_freq)
+})
 
 event.on('reg',function () {
 	var reg_spawn = child_process.spawn( 'node', ['./reg.js'],{stdio:[ 'pipe',null,null, 'pipe' ]});
@@ -613,6 +637,7 @@ event.on('started',function () {
 
 event.on('restart',function () {
 	event.emit('kill_runner','ALL')//kill all runner
+	event.emit('kill_watch_dog')// stop watch dogs
 	setTimeout(function () {
 		active_instrs = {};//clear all running objs
 		//socket.removeAllListeners();

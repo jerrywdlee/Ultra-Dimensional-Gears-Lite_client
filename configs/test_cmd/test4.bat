@@ -1,1 +1,1 @@
-echo Hello CMD
+echo "Hello CMD" %~1

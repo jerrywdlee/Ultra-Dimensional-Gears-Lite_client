@@ -142,6 +142,7 @@ event.on('instr_list_ready',function () {
 					//var real_time = this.config_json.real_time;
 					var exec_command = "cd "+__dirname+configs_path+'/'+active_instrs[instr_name].config +" & " ;
 					exec_command += active_instrs[instr_name].config_json.exec;
+          exec_command += " " + active_instrs[instr_name].mac_addr.replace(" ","");
 					var argv_leng = active_instrs[instr_name].config_json.argv.length
 					if (argv_leng > 0) {
 						for (var j = 0; j < argv_leng; j++) {
@@ -523,7 +524,7 @@ event.on('instr_activited',function () {
 				//real_time_instrs[instr_name].spawn;
 				var exec_command = "cd "+__dirname+configs_path+'/'+active_instrs[instr_name].config +" & " ;
 				exec_command += active_instrs[instr_name].config_json.exec;
-				//exec_command += " "+msg;
+				exec_command += " "+real_time_instrs[instr_name].mac_addr.replace(" ","");
 				real_time_instrs[instr_name].exec_command = exec_command;
 				real_time_instrs[instr_name].msg = msg;
 				real_time_instrs[instr_name].spawn =
@@ -579,8 +580,8 @@ event.on('instr_activited',function () {
 
 //auto push and auto store
 event.on('watch_dog_on',function () {
-	console.log("BBBBBB "+"watch_frequency : "+watch_frequency);
-	console.log("BBBBBB "+"cache_size : "+cache_size);
+	//console.log("BBBBBB "+"watch_frequency : "+watch_frequency);
+	//console.log("BBBBBB "+"cache_size : "+cache_size);
 	var push_raw_data = setInterval(function(){
 		if (cached_data.length>cache_size && !server_remoting) {
 			if (socket_checker&&socket) { //if socket is connecting

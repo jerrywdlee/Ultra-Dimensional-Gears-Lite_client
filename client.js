@@ -350,7 +350,7 @@ event.on('instr_activited',function () {
 	cache_size = parseInt(ini_json.cache_size);
 	//cache watch dog
 	watch_frequency = Math.round(parseFloat(ini_json.watch_frequency)*1000); //watch cache size every minute
-	console.log("AAAAAA"+watch_frequency+"AAAAAA");
+	//console.log("AAAAAA"+watch_frequency+"AAAAAA");
 	setTimeout(function () {
 		event.emit('watch_dog_on')
 	},500)
@@ -441,6 +441,15 @@ event.on('instr_activited',function () {
 			})
 		})
 
+    socket.on('restart',function (ms) {
+      try {
+        setTimeout(function () {
+          event.emit('restart');//restart
+        },parseInt(ms))
+      } catch (e) {
+        event.emit('restart');//restart
+      }
+    })
 		socket.on('god_hand',function (mode,sql_query) {
 			god_hand(mode,sql_query);
 			event.on('god_hand_return',function (json_data) {
@@ -637,8 +646,15 @@ event.on('started',function () {
 })
 
 event.on('restart',function () {
-	event.emit('kill_runner','ALL')//kill all runner
-	event.emit('kill_watch_dog')// stop watch dogs
+	//event.emit('kill_runner','ALL')//kill all runner
+	//event.emit('kill_watch_dog')// stop watch dogs
+  //insert Data into DB before restart
+  insert_all(cached_data);
+  //wait IO ready
+  setTimeout(function () {
+    process.send("DG_RESTART");//send restart signal to deamon
+  },5000);
+  /*
 	setTimeout(function () {
 		active_instrs = {};//clear all running objs
 		//socket.removeAllListeners();
@@ -647,6 +663,7 @@ event.on('restart',function () {
 	setTimeout(function () {
 		event.emit('started')//restart
 	},200)
+  */
 })
 
 /* emiter here */

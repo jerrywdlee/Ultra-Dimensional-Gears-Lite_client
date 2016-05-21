@@ -6,7 +6,7 @@ p ARGV[0]
 while true do
 	#puts "Enter a value :"
 	val = STDIN.gets.chomp # For use "ARGV" as "mac_addr"
-  puts '{\"ruby\" : \"'+val+'\"}'
+  puts '{"ruby" : "'+val+'"}'
 	#putc val
 	#puts val
 end

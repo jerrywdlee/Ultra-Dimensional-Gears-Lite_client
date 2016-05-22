@@ -9,7 +9,7 @@
 <body>
 	<h3>Editing DataBase On [ <%= title %> ]</h3>
 <form method="GET" action="/add_instr">
-	<table>
+	<table style="height:350px">
 		<tr>
 			<td>Can't Find Something?</td>
 			</td>
@@ -17,17 +17,17 @@
 			<button type="button" onclick="location.reload()">Reload</button>
 			</td>
 		</tr>
-		<tr>
+		<tr style="background-color:#CCF;color:#24005b;font-size:1.08em">
 			<td>-----------------</td>
 			<td align="right">-----------------</td>
 		</tr>
 		<tr>
 			<td>Instrument Name:</td>
-			<td><input type="text" name="instr_name" id="instr_name" required="required"/></td>
+			<td align="right"><input type="text" name="instr_name" id="instr_name" required="required"/></td>
 		</tr>
 		<tr>
 			<td>MAC Address:</td>
-			<td><input type="text" name="mac_addr" id="mac_addr"/></td>
+			<td align="right"><input type="text" name="mac_addr" id="mac_addr"/></td>
 		</tr>
 		<!--
 		<tr>
@@ -51,11 +51,27 @@
 thermometer"/> -->
 			</td>
 		</tr>
+    <tr>
+      <td>Real Time?:</td>
+      <td align="center"><input type="checkbox" name="real_time" id="real_time"/></td>
+    </tr>
+    <tr>
+			<td>Sample Freq:</td>
+			<td align="right"><input type="number" name="freq" id="freq" value="3000"/></td>
+		</tr>
+    <tr>
+			<td>Keyword:</td>
+			<td align="right"><input type="text" name="keyword" id="keyword"/></td>
+		</tr>
+    <tr>
+      <td>Trigger:</td>
+      <td align="right"><input type="text" name="trigger" id="trigger"/></td>
+    </tr>
 		<tr>
           <td><button type="button" onclick="location.href='./upload_page'">Edit Configs</button></td>
           <td align="right"></td>
         </tr>
-        <tr>
+    <tr style="background-color:#CCF;color:#24005b;font-size:1.08em">
 			<td>-----------------</td>
 			<td align="right">-----------------</td>
 		</tr>

@@ -36,7 +36,7 @@ var db;
 var sql_get_table_name = "SELECT name FROM sqlite_master WHERE type='table' AND name!='sqlite_sequence' order by name";
 var sql_instr_tab = "SELECT * FROM instrument_table ORDER BY id DESC";
 var sql_raw_data = "SELECT * FROM data_table ORDER BY id DESC";
-var sql_add_instr = "INSERT INTO instrument_table (instr_name, mac_addr, config) VALUES(?, ?, ?)";
+var sql_add_instr = "INSERT INTO instrument_table (instr_name, mac_addr, config, real_time, freq, keyword, trigger) VALUES(?, ?, ?, ?, ?, ?, ?)";
 var sql_del_instr = "DELETE FROM instrument_table WHERE id = ?;";
 
 
@@ -151,8 +151,8 @@ app.get('/add_instr',function(req,res){
   var title= "",msg = "";
   var jump_time = req.query.jump_time;
   if (req.query) {
-    //console.log(req.query);
-    db.run(sql_add_instr, req.query.instr_name, req.query.mac_addr, req.query.config, function(err){
+    console.log(req.query);
+    db.run(sql_add_instr, req.query.instr_name, req.query.mac_addr, req.query.config, req.query.real_time, req.query.freq, req.query.keyword, req.query.trigger, function(err){
       if (err) {
         console.log(err ); msg = "Error:"+err; jump_time = 15000; title="Database Error";
       }else{

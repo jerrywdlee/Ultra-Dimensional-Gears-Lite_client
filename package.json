@@ -2,7 +2,7 @@
   "name": "ultraliteclient",
   "version": "0.1.1",
   "description": "Ultra Dimensional Gears Lite - Client",
-  "main": "client.js",
+  "main": "app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

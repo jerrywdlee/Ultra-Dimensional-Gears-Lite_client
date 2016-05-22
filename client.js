@@ -8,7 +8,7 @@ const event = new EventEmitter();
 /* SQL queries */
 const sql_instr_tab = "SELECT * FROM instrument_table ORDER BY id DESC";
 const sql_raw_data = "SELECT * FROM data_table ORDER BY sample_time DESC";
-const sql_add_instr = "INSERT INTO instrument_table (instr_name, mac_addr, config) VALUES(?, ?, ?)";
+//const sql_add_instr = "INSERT INTO instrument_table (instr_name, mac_addr, config) VALUES(?, ?, ?)";
 const sql_del_instr = "DELETE FROM instrument_table WHERE id = ?";
 const sql_insert_data = "INSERT INTO data_table (instr_name, sample_time, raw_data, pushed) VALUES ($instr_name, $sample_time, $raw_data, $pushed)";
 const sql_clean_data = "DELETE FROM data_table WHERE sample_time BETWEEN $far AND $near";
@@ -77,6 +77,8 @@ event.on('reg_ready',function () {
 			event.emit('reg');
 			return;
 	  }else {
+      //console.log("AAAAAAAAAAAAAAAAAA");
+      //console.log(instr_data);
 			event.emit('config_check_ready',instr_data);
 			//event.emit('ready_to_connect');
 	  }
@@ -93,8 +95,13 @@ event.on('config_check_ready',function (instr_data) {
 				instr_name : instr_data[i].instr_name,
 				config : instr_data[i].config,
 				mac_addr : instr_data[i].mac_addr,
+        real_time : instr_data[i].real_time == null ? false:true,
+        freq : instr_data[i].freq == '' ? 0:instr_data[i].freq,
+        keyword : instr_data[i].keyword,
+        trigger : instr_data[i].trigger,
 				available : false
 			}
+      console.log(active_instrs[instr_data[i].instr_name] );
 		}
 		var configs_list = fs.readdirSync("."+configs_path)
 		//find if some instrument have no config
@@ -424,7 +431,7 @@ event.on('instr_activited',function () {
 
 		socket.on('reg',function () {
 			console.log("reg");
-			var reg_spawn = child_process.spawn( 'node', ['./reg.js'],{stdio:[ 'pipe',null,null, 'pipe' ]});
+			var reg_spawn = child_process.spawn( 'node', ['./reg.js',true],{stdio:[ 'pipe',null,null, 'pipe' ]});
 			reg_spawn.stdout.on('data', function(data){
 					socket.emit('reg_log',"[Reg log]"+data)
 			});

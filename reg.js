@@ -125,7 +125,13 @@ app.use('/set_db', function(req,res){
 app.get('/reg_div', function(req, res){
   console.log(req.query); // for logging
   if (req.query) {  //if not null
-  	//write ini.json
+  	//check if <0
+    req.query.cache_size = req.query.cache_size < 0 ? 50:req.query.cache_size;
+    req.query.watch_frequency = req.query.watch_frequency<0 ? 60:req.query.watch_frequency;
+    req.query.db_size_under = req.query.db_size_under<0 ? 1024:req.query.db_size_under;
+    req.query.db_check_freq = req.query.db_check_freq<0 ? 24:req.query.db_check_freq;
+    req.query.auto_del_num = req.query.auto_del_num<0 ? 1000:req.query.auto_del_num;
+    //write ini.json
     fs.writeFile('ini.json',
     	JSON.stringify(req.query,null,' '),
     	function(err){
@@ -151,7 +157,14 @@ app.get('/add_instr',function(req,res){
   var title= "",msg = "";
   var jump_time = req.query.jump_time;
   if (req.query) {
-    console.log(req.query);
+    //console.log(req.query);
+    //if freq < 0 then 0
+    req.query.freq = req.query.freq<0 ? 0:req.query.freq;
+    //check if "freq" is blank
+    if (req.query.freq == ''||req.query.freq === 0) {
+      req.query.freq = 0;
+      req.query.real_time = 'on';
+    }
     db.run(sql_add_instr, req.query.instr_name, req.query.mac_addr, req.query.config, req.query.real_time, req.query.freq, req.query.keyword, req.query.trigger, function(err){
       if (err) {
         console.log(err ); msg = "Error:"+err; jump_time = 15000; title="Database Error";
@@ -271,9 +284,9 @@ app.get('/exit',function(req,res){
     var package_json = { };
   }
   res.render('jump_page', { title: "~ Admin Process Exiting ~",
-                              title_next:package_json.name||"Google",
+                              title_next:package_json.name||"Ultra-Dimensional-Gears-Lite",
                               jump_time: req.query.jump_time||3000,
-                              href: package_json.homepage||"http://www.google.com",
+                              href: package_json.homepage||"https://github.com/jerrywdlee/Ultra-Dimensional-Gears-Lite_client",
                               disabled:"disabled",
                               msg:"Ending Admin Process, Thank You For Using... " } );
   console.log("------ Admin Process Shuting Down... ------");
@@ -285,7 +298,16 @@ app.get('/exit',function(req,res){
 //get local ip address and tell user
 console.log("Please connect to :");
 var ip_reporter = require('./dg_modules/ip_reporter');
-ip_reporter(port,true);
+//console.log(process.argv[0]);// "C:\Program Files\nodejs\node.exe"
+//console.log(process.argv[1]);// "C:\Users\みずほ\Documents\GitHub\Ultra_DG_Lite\Ultra-Dimensional-Gears-Lite_client\reg"
+//console.log(process.argv[2]);
+if (process.argv[2]) {
+  ip_reporter(port);
+}else {
+  ip_reporter(port,true);
+}
+
+
 /*
 var ifaces = os.networkInterfaces();
 Object.keys(ifaces).forEach(function (ifname) {

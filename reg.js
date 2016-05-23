@@ -38,7 +38,8 @@ var sql_instr_tab = "SELECT * FROM instrument_table ORDER BY id DESC";
 var sql_raw_data = "SELECT * FROM data_table ORDER BY id DESC";
 var sql_add_instr = "INSERT INTO instrument_table (instr_name, mac_addr, config, real_time, freq, keyword, trigger) VALUES(?, ?, ?, ?, ?, ?, ?)";
 var sql_del_instr = "DELETE FROM instrument_table WHERE id = ?;";
-
+var sql_show_instr = "SELECT * FROM instrument_table WHERE id = ?";
+var sql_update_instr = "UPDATE instrument_table SET instr_name=?, mac_addr=?, config=? , real_time=?, freq=?, keyword=?, trigger=? WHERE id=?";
 
 //for http server
 var	express = require('express'),
@@ -161,6 +162,7 @@ app.get('/add_instr',function(req,res){
     //if freq < 0 then 0
     req.query.freq = req.query.freq<0 ? 0:req.query.freq;
     //check if "freq" is blank
+    //if freq === 0 ,it is as an real_time only device
     if (req.query.freq == ''||req.query.freq === 0) {
       req.query.freq = 0;
       req.query.real_time = 'on';
@@ -188,6 +190,85 @@ app.get('/add_instr',function(req,res){
           msg:msg } );
   },io_wait_time);
 });
+//render Instrument edit page
+app.use('/edit_instr', function(req,res){
+  //reload ini.json for setting db
+  var ini_json = load_ini_json();
+  //reload configs_list if user add new plugs
+  configs_list = fs.readdirSync(configs_path);
+
+  //and render set_db page if ini.json completed
+  if (ini_json.dev_name&&db_flag) {
+    //try to connect db
+    connect_db();
+    var instr_data = [{Error: "Database Error!"}];//if DB err
+    var raw_data = instr_data;
+    //access db
+    db.all(sql_show_instr, req.query.instr_id,function(err,res){
+      instr_data = res;
+      if (res.length===0) {instr_data=[{},{"No Data": "No Data to View."}]};
+      if (err){
+          instr_data =[{Error: err}] ;//avoid view error
+      };
+      //console.log(instr_data);
+    });
+    // waitting for io ready
+    setTimeout(function(){
+      //console.log(instr_data);
+      res.render('edit_instr_page', {
+        title: instr_data[0].instr_name,
+        instr_data: instr_data[0],
+        configs_list:configs_list}
+    );},io_wait_time);
+  }else{
+    res.render('jump_page',{
+      title: "Not Initiated Device",
+      title_next:"Initiating",
+      msg:"Whoops! You seems have not regsitered..",
+      disabled:"",
+      jump_time: 3000,
+      href: "./"
+    });
+  }
+});
+//update instrument page
+app.get('/update_instr',function(req,res){
+  var title= "",msg = "";
+  var jump_time = req.query.jump_time;
+  if (req.query) {
+    //console.log(req.query);
+    //if freq < 0 then 0
+    req.query.freq = req.query.freq<0 ? 0:req.query.freq;
+    //check if "freq" is blank
+    //if freq === 0 ,it is as an real_time only device
+    if (req.query.freq == ''||req.query.freq === 0) {
+      req.query.freq = 0;
+      req.query.real_time = 'on';
+    }
+    db.run(sql_update_instr, req.query.instr_name, req.query.mac_addr, req.query.config, req.query.real_time, req.query.freq, req.query.keyword, req.query.trigger,req.query.instr_id , function(err){
+      if (err) {
+        console.log(err ); msg = "Error:"+err; jump_time = 15000; title="Database Error";
+      }else{
+        //must wait io ready
+        title = req.query.instr_name+" All Changes Saved";
+        msg = "Instrument [ "+req.query.instr_name+" ] All Changes Saved.";
+      }   //console.log(req.query);
+    });
+  };
+  //wait db io ready
+  setTimeout(function(){
+    //console.log(title);
+    console.log(msg);
+    res.render('jump_page', {
+          title: title,
+          title_next: req.query.title_next,
+          jump_time: jump_time,
+          href: req.query.href,
+          disabled:"",
+          msg:msg } );
+  },io_wait_time);
+});
+
 //confirm deleted instrument
 app.get('/del_instr',function(req,res){
   if (req.query) {

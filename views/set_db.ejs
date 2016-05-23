@@ -107,6 +107,12 @@ thermometer"/> -->
 		<% } %>
 		<!--  <td > <%= data.id %></td> -->
 		<% if (data.id){ %>
+      <td>
+        <form method="GET" action="/edit_instr">
+        <input type="hidden" name="instr_id" value="<%= data.id %>"/>
+        <input type="submit" value="Edit" />
+        </form>
+      </td>
 
 			<td>
 				<form method="GET" action="/del_instr">

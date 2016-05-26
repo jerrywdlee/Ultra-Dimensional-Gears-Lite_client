@@ -4,10 +4,7 @@
 "exec" : "test6",
 "exec_mode" : false,
 "argv" : ["argv01","argv02"],
-"keep_run" : true,
-"auto_sample" : {"freq":5000,"keyword":"my_c_test"},
 "multiprocess":true,
-"real_time": {"report": false , "control": false},
-"db_record":{"real_time":false,"auto_sample":true},
+"db_record":{"real_time":false},
 "author" : "YOUR.org"
 }

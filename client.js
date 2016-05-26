@@ -141,7 +141,9 @@ event.on('instr_list_ready',function () {
 			/* give all objs start function */
 			active_instrs[i].config_json=config_json;
 			//console.log(active_instrs[i].config_json.real_time);
-			if (config_json.exec_mode && config_json.auto_sample) {
+			//if (config_json.exec_mode && config_json.auto_sample)
+
+      if (active_instrs[i].config_json.exec_mode && active_instrs[i].freq > 0) {
 				//console.log("{"+i+"} : "+active_instrs[i].config_json.exec_mode);
 				active_instrs[i].running = function() {
 					var instr_name = this.instr_name;
@@ -169,14 +171,14 @@ event.on('instr_list_ready',function () {
 										sample_time: time_stamp(),
 										raw_data:'[Error:]'+stderr.toString().replace(/[\n\r]/g,""),
 										pushed:0};
-										if (active_instrs[instr_name].config_json.real_time.report) {
+										//if (active_instrs[instr_name].config_json.real_time.report)
+                    if (active_instrs[instr_name].real_time)
+                    {
 											//console.log(temp_err_obj);
-											socket.emit('real_time_report',JSON.stringify(temp_err_obj,null,' '));
+											//socket.emit('real_time_report',JSON.stringify(temp_err_obj,null,' '));
+                      socket.emit('real_time_report',temp_err_obj);
 										}
-										if (active_instrs[instr_name].config_json.db_record.auto_sample) {
-											cached_data.push(temp_err_obj);
-										}
-										//cached_data.push(temp_err_obj);
+										cached_data.push(temp_err_obj);
 
 								}else {
 									//cmd will return alot of things
@@ -202,13 +204,31 @@ event.on('instr_list_ready',function () {
 									//raw_data:data.toString().replace(/\r?\n/g,""), //have bug
 									raw_data:data.toString().replace(/[\n\r]/g,""),
 									pushed:0};
-								if (active_instrs[instr_name].config_json.real_time.report) {
+								//if (active_instrs[instr_name].config_json.real_time.report)
+                if (active_instrs[instr_name].real_time) {
 									//console.log(temp_data_obj);
-									socket.emit('real_time_report',JSON.stringify(temp_data_obj,null,' '));
+									//socket.emit('real_time_report',JSON.stringify(temp_data_obj,null,' '));
+                  socket.emit('real_time_report',temp_data_obj);
 								}
-								if (active_instrs[instr_name].config_json.db_record.auto_sample) {
+                /*
+								if (active_instrs[instr_name].config_json.db_record.trigger) {
 									cached_data.push(temp_data_obj);
 								}
+                */
+                if (active_instrs[instr_name].trigger) {
+                  try {
+                    var tmp_trigger_obj = JSON.parse(temp_data_obj.raw_data)
+                    //trigger usage
+                    if(eval("tmp_trigger_obj."+active_instrs[instr_name].trigger.toString())){
+                      cached_data.push(temp_data_obj);
+                    }
+                  } catch (e) {
+                    console.error("[Trigger err]:"+e);
+                    cached_data.push(temp_data_obj);
+                  }
+                }else {
+                  cached_data.push(temp_data_obj);
+                }
 								//cached_data.push(temp_data_obj);
 							})
 						} catch (e) {
@@ -233,15 +253,21 @@ event.on('instr_list_ready',function () {
 					})
 					*/
 				}
-			}else if(active_instrs[i].config_json.auto_sample){
+			}
+      //else if(active_instrs[i].config_json.auto_sample)
+      else if(active_instrs[i].freq > 0)
+      {
 				active_instrs[i].spawn=spawn_process(config_json,active_instrs[i].config,__dirname,configs_path,active_instrs[i].mac_addr);
 				active_instrs[i].running = function() {
 					var spawn = this.spawn;
-					var keyword = this.config_json.auto_sample.keyword;
-					var freq = this.config_json.auto_sample.freq;
+					//var keyword = this.config_json.auto_sample.keyword;
+          var keyword = this.keyword;
+					//var freq = this.config_json.auto_sample.freq;
+          var freq = this.freq;
 					var config = this.config;
 					var instr_name = this.instr_name;
-					var real_time = this.config_json.real_time;
+					//var real_time = this.config_json.real_time;
+          var real_time = this.real_time;
 					//console.log(real_time);
 					spawn.stdout.setEncoding('utf8');
 					spawn.stdout.on('data', function(data){
@@ -252,13 +278,35 @@ event.on('instr_list_ready',function () {
 							raw_data:data.toString().replace(/[\n\r]/g,""),
 							pushed:0};
 						console.log('['+instr_name+']' +data.toString());
-						if (active_instrs[instr_name].config_json.real_time.report) {
+						//if (active_instrs[instr_name].config_json.real_time.report)
+            if (active_instrs[instr_name].real_time)
+            {
 							//console.log(temp_data_obj);
-							socket.emit('real_time_report',JSON.stringify(temp_data_obj,null,' '));
+							//socket.emit('real_time_report',JSON.stringify(temp_data_obj,null,' '));
+              socket.emit('real_time_report',temp_data_obj);
 						}
-						if (active_instrs[instr_name].config_json.db_record.auto_sample) {
+            /*
+						if (active_instrs[instr_name].config_json.db_record.trigger) {
 							cached_data.push(temp_data_obj);
-						}
+						}*/
+            if (active_instrs[instr_name].trigger) {
+              try {
+                var tmp_trigger_obj = JSON.parse(temp_data_obj.raw_data)
+                //trigger usage
+                if(eval("tmp_trigger_obj."+active_instrs[instr_name].trigger.toString())){
+                  cached_data.push(temp_data_obj);
+                  //console.log("CCCCCCCCC TRIGER TRUE CCCCCCCCC");
+                }
+                //console.log("BBBBBBBBBBBBB");
+                //console.log("tmp_trigger_obj."+active_instrs[instr_name].trigger.toString());
+                //console.log("BBBBBBBBBBBBB");
+              } catch (e) {
+                console.error("[Trigger err]:"+e);
+                cached_data.push(temp_data_obj);
+              }
+            }else {
+              cached_data.push(temp_data_obj);
+            }
 					});
 
 					spawn.stderr.on('data',function(data) {
@@ -268,13 +316,16 @@ event.on('instr_list_ready',function () {
 							raw_data:'[Error:]'+data.toString().replace(/[\n\r]/g,""),
 							pushed:0};
 						console.error('['+instr_name+']' +"Error!! \n"+data)
-						if (active_instrs[instr_name].config_json.real_time.report) {
+						//if (active_instrs[instr_name].config_json.real_time.report)
+            if (active_instrs[instr_name].real_time)
+            {
 							//console.log(temp_err_obj);
-							socket.emit('real_time_report',JSON.stringify(temp_err_obj,null,' '));
+							//socket.emit('real_time_report',JSON.stringify(temp_err_obj,null,' '));
+              socket.emit('real_time_report',temp_err_obj);
 						}
-						if (active_instrs[instr_name].config_json.db_record.auto_sample) {
+						//if (active_instrs[instr_name].config_json.db_record.trigger) {
 							cached_data.push(temp_err_obj);
-						}
+						//}
 					})
 
 					spawn.on('close', function (code) {
@@ -332,7 +383,9 @@ event.on('instr_list_ready',function () {
 
 event.on('instr_setup_ready',function () {
 	for (var i in active_instrs) {
-		if (active_instrs[i].available&&active_instrs[i].config_json.auto_sample) {
+		//if (active_instrs[i].available&&active_instrs[i].config_json.auto_sample)
+    if (active_instrs[i].available&&active_instrs[i].freq > 0)
+    {
 			//console.log("---==== if_running "+ !active_instrs[i].if_running);
 			//console.log("=====running "+i);
 			active_instrs[i].running()
@@ -425,8 +478,9 @@ event.on('instr_activited',function () {
 			data.forEach(function (temp_data) {
 				temp_data.pushed=1;
 			})
-			console.log(data);
-			socket.emit('return_force_push',JSON.stringify(data,null,' '))
+			//console.log(data);
+			//socket.emit('return_force_push',JSON.stringify(data,null,' '))
+      socket.emit('return_force_push',data)
 		})
 
 		socket.on('reg',function () {
@@ -501,8 +555,8 @@ event.on('instr_activited',function () {
 								raw_data:'[Error:]'+data.toString().replace(/[\n\r]/g,""),
 								pushed:0};
 							console.error('['+instr_name+']' +"Error!! \n"+data)
-
-							socket.emit('real_time_report',JSON.stringify(temp_err_obj,null,' '));
+              //socket.emit('real_time_report',JSON.stringify(temp_err_obj,null,' '));
+							socket.emit('real_time_report',temp_err_obj);
 							if (active_instrs[instr_name].config_json.db_record.real_time) {
 								cached_data.push(temp_err_obj);
 							}
@@ -556,8 +610,8 @@ event.on('instr_activited',function () {
 							raw_data:'[Error:]'+stderr.toString().replace(/[\n\r]/g,""),
 							pushed:0};
 
-							socket.emit('real_time_report',JSON.stringify(temp_err_obj,null,' '));
-
+							//socket.emit('real_time_report',JSON.stringify(temp_err_obj,null,' '));
+              socket.emit('real_time_report',temp_err_obj);
 							if (active_instrs[instr_name].config_json.db_record.real_time) {
 								cached_data.push(temp_err_obj);
 							}
@@ -575,7 +629,8 @@ event.on('instr_activited',function () {
 						sample_time: time_stamp(),
 						raw_data:data.toString().replace(/[\n\r]/g,""),
 						pushed:0};
-						socket.emit('real_time_report',JSON.stringify(temp_data_obj,null,' '));
+						//socket.emit('real_time_report',JSON.stringify(temp_data_obj,null,' '));
+            socket.emit('real_time_report',temp_data_obj);
 					if (active_instrs[instr_name].config_json.db_record.real_time) {
 						cached_data.push(temp_data_obj);
 					}
@@ -604,7 +659,8 @@ event.on('watch_dog_on',function () {
 				for (var i = cached_data.length - 1; i >= 0; i--) {
 					cached_data[i].pushed = 1;//set if pushed to server
 				};
-				socket.emit('push_raw_data',JSON.stringify(cached_data,null,' '));
+				//socket.emit('push_raw_data',JSON.stringify(cached_data,null,' '));
+        socket.emit('push_raw_data',cached_data);
 			};
 			insert_all(cached_data);
 			cached_data=[];//clean cache

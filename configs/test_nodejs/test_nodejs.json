@@ -4,10 +4,7 @@
 "exec" : "node test2",
 "argv" : ["node_argv","Hello"],
 "exec_mode" : false,
-"keep_run" : false,
-"auto_sample" : {"freq":5000,"keyword":"my_node_test"},
 "multiprocess":true,
-"real_time": {"report": true , "control": false},
-"db_record":{"real_time":false,"auto_sample":true},
+"db_record":{"real_time":false},
 "author" : "YOUR.org"
 }

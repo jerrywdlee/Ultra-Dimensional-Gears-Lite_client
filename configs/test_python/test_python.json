@@ -4,10 +4,7 @@
 "exec" : "python test3",
 "argv" : [],
 "exec_mode" : false,
-"keep_run" : true,
-"auto_sample" : {"freq":5000,"keyword":"my_py_test"},
 "multiprocess":true,
-"real_time": {"report": false , "control": false},
-"db_record":{"real_time":false,"auto_sample":true},
+"db_record":{"real_time":false},
 "author" : "YOUR.org"
 }

@@ -70,6 +70,7 @@ index_router.get('/', function(req, res, next) {
               db_check_freq: ini_json.db_check_freq || 24,
               db_size_under: ini_json.db_size_under || 1024,
               auto_del_num: ini_json.auto_del_num || 1000,
+              save_packet_mode: ini_json.save_packet_mode || false
               });
 });
 
@@ -124,6 +125,7 @@ app.use('/set_db', function(req,res){
 
 //when get data from index jump to confirm_set.ejs
 app.get('/reg_div', function(req, res){
+  console.log("Device Registed!");
   console.log(req.query); // for logging
   if (req.query) {  //if not null
   	//check if <0
@@ -132,6 +134,8 @@ app.get('/reg_div', function(req, res){
     req.query.db_size_under = req.query.db_size_under<0 ? 1024:req.query.db_size_under;
     req.query.db_check_freq = req.query.db_check_freq<0 ? 24:req.query.db_check_freq;
     req.query.auto_del_num = req.query.auto_del_num<0 ? 1000:req.query.auto_del_num;
+    //check checkbox:save_packet_mode
+    req.query.save_packet_mode = req.query.save_packet_mode ? true:false;
     //write ini.json
     fs.writeFile('ini.json',
     	JSON.stringify(req.query,null,' '),

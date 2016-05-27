@@ -35,6 +35,7 @@ var auto_del_num = 1000; //auto delete 1000 records
 var cache_size = 50;
 //cache watch dog
 var watch_frequency = 60*1000; //watch cache size every minute
+var save_packet_mode = false;//if true ,not push data auto ,but push realtime or trigger
 
 //a lot of flags
 var db_flag = fs.readdirSync('./').indexOf('client_db.sqlite3')===-1?false:true;
@@ -410,7 +411,9 @@ event.on('instr_activited',function () {
 	cache_size = parseInt(ini_json.cache_size);
 	//cache watch dog
 	watch_frequency = Math.round(parseFloat(ini_json.watch_frequency)*1000); //watch cache size every minute
-	//console.log("AAAAAA"+watch_frequency+"AAAAAA");
+  //if save_packet_mode not push auto
+  save_packet_mode = ini_json.save_packet_mode;
+	//console.log("AAAAAA "+save_packet_mode+" AAAAAA");
 	setTimeout(function () {
 		event.emit('watch_dog_on')
 	},500)
@@ -655,7 +658,7 @@ event.on('watch_dog_on',function () {
 	//console.log("BBBBBB "+"cache_size : "+cache_size);
 	var push_raw_data = setInterval(function(){
 		if (cached_data.length>cache_size && !server_remoting) {
-			if (socket_checker&&socket) { //if socket is connecting
+			if (socket_checker&&socket&&!save_packet_mode) { //if socket is connecting && not save_packet_mode
 				for (var i = cached_data.length - 1; i >= 0; i--) {
 					cached_data[i].pushed = 1;//set if pushed to server
 				};

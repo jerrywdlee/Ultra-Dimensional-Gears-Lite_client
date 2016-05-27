@@ -90,7 +90,16 @@
           <td>Auto Del* Num:</td>
           <td><input type="number" name="auto_del_num" id="auto_del_num" value="<%= auto_del_num %>" required="required"/></td>
         </tr>
-
+        <tr class="adv_set" style="display:none">
+          <td>Save Packet Mode:</td>
+          <td align="center">
+            <input type="checkbox" name="save_packet_mode" id="save_packet_mode" value="true" <%= save_packet_mode?'checked':'' %>/>
+          </td>
+        </tr>
+        <tr class="adv_set" style="background-color:#CCF;color:#24005b;font-size:1.08em;display:none">
+          <td>-----------------</td>
+          <td align="right">-----------------</td>
+        </tr>
         <!-- Advanced Settings end -->
         <tr>
           <td><button type="button" onclick="location.href='./upload_page'"  >Edit Configs</button></td>

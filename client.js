@@ -221,15 +221,23 @@ event.on('instr_list_ready',function () {
                     var tmp_trigger_obj = JSON.parse(temp_data_obj.raw_data)
                     //trigger usage
                     if(eval("tmp_trigger_obj."+active_instrs[instr_name].trigger.toString())){
-                      cached_data.push(temp_data_obj);
+                      //cached_data.push(temp_data_obj);
+                      if (socket_checker&&socket) {
+                        //it will still pushed = 0
+                        socket.emit('push_triggered_data',temp_data_obj);
+                      }
                     }
                   } catch (e) {
                     console.error("[Trigger err]:"+e);
-                    cached_data.push(temp_data_obj);
+                    //cached_data.push(temp_data_obj);
+                    if (socket_checker&&socket) {
+                      socket.emit('push_triggered_data',e);
+                    }
                   }
-                }else {
-                  cached_data.push(temp_data_obj);
-                }
+                }//else {
+                //push data to cached_data[]
+                cached_data.push(temp_data_obj);
+                //}
 								//cached_data.push(temp_data_obj);
 							})
 						} catch (e) {
@@ -295,15 +303,21 @@ event.on('instr_list_ready',function () {
                 var tmp_trigger_obj = JSON.parse(temp_data_obj.raw_data)
                 //trigger usage
                 if(eval("tmp_trigger_obj."+active_instrs[instr_name].trigger.toString())){
-                  cached_data.push(temp_data_obj);
+                  //cached_data.push(temp_data_obj);
                   //console.log("CCCCCCCCC TRIGER TRUE CCCCCCCCC");
+                  if (socket_checker&&socket) {
+                    socket.emit('push_triggered_data',temp_data_obj);
+                  }
                 }
                 //console.log("BBBBBBBBBBBBB");
                 //console.log("tmp_trigger_obj."+active_instrs[instr_name].trigger.toString());
                 //console.log("BBBBBBBBBBBBB");
               } catch (e) {
                 console.error("[Trigger err]:"+e);
-                cached_data.push(temp_data_obj);
+                //cached_data.push(temp_data_obj);
+                if (socket_checker&&socket) {
+                  socket.emit('push_triggered_data',e);
+                }
               }
             }else {
               cached_data.push(temp_data_obj);

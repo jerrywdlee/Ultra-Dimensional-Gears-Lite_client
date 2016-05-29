@@ -535,6 +535,25 @@ event.on('instr_activited',function () {
 			})
 		})
 
+    socket.on('get_dev_conf',function () {
+      socket.emit('dev_conf',load_ini_json())
+    })
+    socket.on('set_dev_conf',function (conf) {
+      if(conf){
+        fs.writeFile('ini.json',
+        	JSON.stringify(conf,null,' '),
+        	function(err){
+            if (err) {
+              console.log(err);
+              //socket.emit('error',err);
+              return;
+            }else {
+              console.log(conf);
+              event.emit('restart')// restart for new conf
+            }
+          })
+      }
+    })
 		socket.on('real_time_control',function (instr_name,msg) {
 			if (active_instrs[instr_name]) {
 				if (!real_time_instrs[instr_name]) {

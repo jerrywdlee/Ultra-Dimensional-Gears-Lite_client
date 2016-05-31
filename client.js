@@ -44,6 +44,8 @@ var server_remoting = false;//if remoted by server set it to true
 var socket_checker = false;//socket checker;
 var socket;
 var socket_listeners;
+var device_name;
+var hashed_password;
 
 //store of activited objs
 var active_instrs = {};
@@ -435,7 +437,9 @@ event.on('instr_activited',function () {
 	if (!socket) {
 		socket = socket_io.connect(ini_json.server_url);
 	}
-	console.log( sha_256(ini_json.password));//test, waitting for https
+  device_name = ini_json.dev_name;
+  hashed_password = sha_256(ini_json.password);
+	//console.log( sha_256(ini_json.password));//test, waitting for https
 
 	/* test code */
 	//setTimeout(function () {
@@ -457,6 +461,7 @@ event.on('instr_activited',function () {
 			socket_checker=true;
 			get_instr_status();
 			socket.emit('instr_status',instr_list);
+      socket.emit('log_in',device_name,hashed_password);
 		});
 
 		socket.on('disconnect',function() {
@@ -501,7 +506,7 @@ event.on('instr_activited',function () {
 		})
 
 		socket.on('reg',function () {
-			console.log("reg");
+			console.log("!!!!!! reg !!!!!!");// for test 
 			var reg_spawn = child_process.spawn( 'node', ['./reg.js',true],{stdio:[ 'pipe',null,null, 'pipe' ]});
 			reg_spawn.stdout.on('data', function(data){
 					socket.emit('reg_log',"[Reg log]"+data)

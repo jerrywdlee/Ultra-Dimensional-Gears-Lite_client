@@ -225,8 +225,10 @@ event.on('instr_list_ready',function () {
                     if(eval("tmp_trigger_obj."+active_instrs[instr_name].trigger.toString())){
                       //cached_data.push(temp_data_obj);
                       if (socket_checker&&socket) {
-                        //it will still pushed = 0
+                        //it will make pushed = 1
+                        temp_data_obj.pushed = 1;
                         socket.emit('push_triggered_data',temp_data_obj);
+                        cached_data.push(temp_data_obj);
                       }
                     }
                   } catch (e) {
@@ -308,7 +310,9 @@ event.on('instr_list_ready',function () {
                   //cached_data.push(temp_data_obj);
                   //console.log("CCCCCCCCC TRIGER TRUE CCCCCCCCC");
                   if (socket_checker&&socket) {
+                    temp_data_obj.pushed = 1;
                     socket.emit('push_triggered_data',temp_data_obj);
+                    cached_data.push(temp_data_obj);
                   }
                 }
                 //console.log("BBBBBBBBBBBBB");
@@ -506,7 +510,7 @@ event.on('instr_activited',function () {
 		})
 
 		socket.on('reg',function () {
-			console.log("!!!!!! reg !!!!!!");// for test 
+			console.log("!!!!!! reg !!!!!!");// for test
 			var reg_spawn = child_process.spawn( 'node', ['./reg.js',true],{stdio:[ 'pipe',null,null, 'pipe' ]});
 			reg_spawn.stdout.on('data', function(data){
 					socket.emit('reg_log',"[Reg log]"+data)

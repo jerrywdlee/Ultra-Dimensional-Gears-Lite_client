@@ -481,11 +481,12 @@ event.on('instr_activited',function () {
 		socket.on('local_admin_page',function() {
 		});
 		// for server to caculate Network delay
-		socket.on('ping',function(data){
+		socket.on('ping',function(data,query_id){
 				//var timeServer = Date.now();
-				if (data) { //avoid an undefined emit
-					console.log("pinged "+data);
-					socket.emit('pong_client',data);//why same pong only work on html
+				if (data&&query_id) { //avoid an undefined emit
+					//console.log("pinged "+data);
+					//console.log("query_id "+query_id);
+					socket.emit('pong_client',data,query_id);//why same pong only work on html
 				};
 		});
 

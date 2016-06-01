@@ -46,6 +46,7 @@ var socket;
 var socket_listeners;
 var device_name;
 var hashed_password;
+var uuid;
 
 //store of activited objs
 var active_instrs = {};
@@ -443,6 +444,7 @@ event.on('instr_activited',function () {
 	}
   device_name = ini_json.dev_name;
   hashed_password = sha_256(ini_json.password);
+  uuid = ini_json.uuid;
 	//console.log( sha_256(ini_json.password));//test, waitting for https
 
 	/* test code */
@@ -465,7 +467,7 @@ event.on('instr_activited',function () {
 			socket_checker=true;
 			get_instr_status();
 			socket.emit('instr_status',instr_list);
-      socket.emit('log_in',device_name,hashed_password);
+      socket.emit('log_in',device_name,hashed_password,uuid);
 		});
 
 		socket.on('disconnect',function() {

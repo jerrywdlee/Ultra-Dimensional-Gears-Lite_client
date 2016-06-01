@@ -758,7 +758,9 @@ event.on('restart',function () {
 	//event.emit('kill_runner','ALL')//kill all runner
 	//event.emit('kill_watch_dog')// stop watch dogs
   //insert Data into DB before restart
-  insert_all(cached_data);
+  if (db_flag) {
+    insert_all(cached_data);
+  }
   //wait IO ready
   setTimeout(function () {
     process.send("DG_RESTART");//send restart signal to deamon

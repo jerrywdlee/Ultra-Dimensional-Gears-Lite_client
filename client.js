@@ -513,7 +513,7 @@ event.on('instr_activited',function () {
 		})
 
 		socket.on('reg',function () {
-			console.log("!!!!!! reg !!!!!!");// for test
+			//console.log("!!!!!! reg !!!!!!");// for test
 			var reg_spawn = child_process.spawn( 'node', ['./reg.js',true],{stdio:[ 'pipe',null,null, 'pipe' ]});
 			reg_spawn.stdout.on('data', function(data){
 					socket.emit('reg_log',"[Reg log]"+data)
@@ -567,15 +567,19 @@ event.on('instr_activited',function () {
       }
     })
 		socket.on('real_time_control',function (instr_name,msg) {
+      //console.log("AAAAAA real_time_control OK AAAAAA");
 			if (active_instrs[instr_name]) {
+        //console.log("AAAAAA active_instrs[instr_name] OK AAAAAA");
 				if (!real_time_instrs[instr_name]) {
+          //console.log("AAAAAA !real_time_instrs[instr_name] OK AAAAAA");
 					real_time_instrs[instr_name] = {};
 					real_time_instrs[instr_name].config_json = active_instrs[instr_name].config_json;
 					real_time_instrs[instr_name].config = active_instrs[instr_name].config;
 					real_time_instrs[instr_name].mac_addr = active_instrs[instr_name].mac_addr
 					if (active_instrs[instr_name].config_json.exec_mode) {
 						event.emit('real_time_control',instr_name,msg)
-					}else if (active_instrs[instr_name].spawn) {
+					}else if (!active_instrs[instr_name].spawn) {
+            //console.log("AAAAAA !active_instrs[instr_name].spawn OK AAAAAA");
 						//console.log(active_instrs[instr_name].config);
 						real_time_instrs[instr_name].spawn = spawn_process(real_time_instrs[instr_name].config_json,
 							real_time_instrs[instr_name].config,__dirname,configs_path,real_time_instrs[instr_name].mac_addr);
@@ -615,7 +619,7 @@ event.on('instr_activited',function () {
 							socket.emit('real_time_report',instr_name + ' is exited : '+code);
 						});
 					}else {
-						socket.emit('real_time_report',"Cannot Initiate Device : "+instr_name);
+						//socket.emit('real_time_report',"Cannot Initiate Device : "+instr_name);
 					}
 				}else {
 					event.emit('real_time_control',instr_name,msg)
@@ -686,7 +690,8 @@ event.on('instr_activited',function () {
 			}else {
 				var spawn_realtime = real_time_instrs[instr_name].spawn;
 				try {
-					spawn_realtime.stdin.write(msg+"\n");//must end by "\n"
+					//spawn_realtime.stdin.write(msg+"\n");//must end by "\n"
+          real_time_instrs[instr_name].spawn.stdin.write(msg+"\n");
 				} catch (e) {
 					console.error('['+instr_name+']' +"Error!! \n"+e);
 				}

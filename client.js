@@ -362,6 +362,7 @@ event.on('instr_list_ready',function () {
 
 					var runner = setInterval(function () {
 						try {
+              keyword = keyword.toString().replace(/[\n\r]/g,"")
 							spawn.stdin.write(keyword+"\n");//must end by "\n"
 						} catch (e) {
 							console.error('['+instr_name+']' +"Error!! \n"+e);
@@ -691,6 +692,7 @@ event.on('instr_activited',function () {
 				var spawn_realtime = real_time_instrs[instr_name].spawn;
 				try {
 					//spawn_realtime.stdin.write(msg+"\n");//must end by "\n"
+          msg = msg.toString().replace(/[\n\r]/g,"")
           real_time_instrs[instr_name].spawn.stdin.write(msg+"\n");
 				} catch (e) {
 					console.error('['+instr_name+']' +"Error!! \n"+e);

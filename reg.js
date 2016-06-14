@@ -53,13 +53,40 @@ app.set('view engine', 'ejs');
 var port = 8888;
 app.listen(port);
 
+var temp_uuid = get_uuid();// will also used in ngrok's URL
+
+var ngrok = require('ngrok');
+var ini_json = load_ini_json();
+var ngrok_domain_random = ini_json.uuid || get_uuid();
+ngrok_domain_random = ngrok_domain_random.split('Z')[1];
+var ngrok_domain = ini_json.dev_name || 'udg';
+ngrok_domain += '-';
+ngrok_domain += ngrok_domain_random;
+ngrok.connect({
+	proto: 'http', // http|tcp|tls
+	addr: port, // port or network address
+	//auth: 'user:pwd', // http basic authentication for tunnel
+	//subdomain: ngrok_domain, // only paid plan can use this
+	//authtoken: '12345', // your authtoken from ngrok.com
+	//region: 'us' // one of ngrok regions (us, eu, au, ap), defaults to us
+}, function (err, url) {
+  if (err) {
+    console.error(err);
+  }else {
+    console.log("Temporary Internet Connection On :");
+    console.log(url);
+    var qrcode = require('qrcode-terminal');
+    qrcode.generate(url);
+  }
+});
+
 index_router.get('/', function(req, res, next) {
   var ini_json = load_ini_json();
   var disable = ini_json.dev_name?"":"disabled";//confirm if have ini.json
   res.render('index', {
   						title: ini_json.dev_name || 'New Device',
   						disable: disable ||'true' ,
-              uuid: ini_json.uuid || get_uuid(),
+              uuid: ini_json.uuid || temp_uuid,
               server_url: ini_json.server_url || "http://localhost/",
               org: ini_json.org || 'Unknow.Org',
               dev_name: ini_json.dev_name || '',
